@@ -19,10 +19,10 @@ RUN pip install --no-cache-dir --upgrade pip -r requirements.txt
 COPY . .
 
 # 6. Expose the port the app runs on
-EXPOSE 8000
+EXPOSE 8080
 
 # 7. Define the command to run your application
 # "main:app" refers to the 'app' instance in your 'main.py' file.
 # "--host", "0.0.0.0" makes the server accessible from outside the container.
-# "--port", "8000" specifies the port Uvicorn should listen on inside the container.
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Use the PORT environment variable provided by Cloud Run
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080}"]
