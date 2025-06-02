@@ -3,7 +3,7 @@
 # 1. Use an official Python runtime as a parent image
 # Using a slim version for a smaller image size.
 # Ensure this Python version matches or is compatible with what your app needs (e.g., 3.10)
-FROM python:3.10-slim
+FROM --platform=linux/amd64 python:3.10-slim
 
 # 2. Set the working directory in the container
 WORKDIR /app
