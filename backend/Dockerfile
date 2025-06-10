@@ -8,21 +8,28 @@ FROM --platform=linux/amd64 python:3.10-slim
 # 2. Set the working directory in the container
 WORKDIR /app
 
-# 3. Copy the requirements file into the container at /app
+# 3. Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# 4. Copy the requirements file into the container at /app
 # We'll create this requirements.txt file next
 COPY requirements.txt .
 
-# 4. Install any needed packages specified in requirements.txt
-RUN pip install --no-cache-dir --upgrade pip -r requirements.txt
+# 5. Install any needed packages specified in requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-# 5. Copy the rest of the application code into the container at /app
+# 6. Copy the rest of the application code into the container at /app
 COPY . .
 
-# 6. Expose the port the app runs on
+# 7. Set environment variables
+ENV PORT=8080
+ENV PYTHONUNBUFFERED=1
+ENV LOG_LEVEL=debug
+
+# 8. Expose the port the app runs on
 EXPOSE 8080
 
-# 7. Define the command to run your application
-# "main:app" refers to the 'app' instance in your 'main.py' file.
-# "--host", "0.0.0.0" makes the server accessible from outside the container.
-# Use the PORT environment variable provided by Cloud Run
-CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080}"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "1", "--log-level", "debug"]

@@ -8,5 +8,11 @@ __pycache__/
 env/
 venv/
 .env
+.deploy.env
 .pytest_cache/
 .vscode/
+
+secrets/
+
+*.log
+local_dev_scripts/
