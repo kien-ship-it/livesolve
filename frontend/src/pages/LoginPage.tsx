@@ -1,56 +1,75 @@
-// frontend/src/pages/LoginPage.tsx
-import React from 'react';
+// src/pages/LoginPage.tsx
 
-const LoginPage: React.FC = () => {
+import { useState } from 'react';
+import type { FormEvent } from 'react';
+import { auth } from '../firebaseConfig';
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword
+} from 'firebase/auth';
+import { useNavigate } from 'react-router-dom'; // Assuming you have react-router-dom
+
+export default function LoginPage() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
+
+  const handleAuthAction = async (isSigningUp: boolean) => {
+    setError(''); // Clear previous errors
+    try {
+      if (isSigningUp) {
+        await createUserWithEmailAndPassword(auth, email, password);
+      } else {
+        await signInWithEmailAndPassword(auth, email, password);
+      }
+      // On success, Firebase's onAuthStateChanged listener in our context
+      // will pick up the change, and we can navigate away.
+      navigate('/problem'); // Navigate to the problem page after login/signup
+    } catch (err: any) {
+      setError(err.message);
+      console.error("Authentication Error: ", err);
+    }
+  };
+
   return (
-    <div className="container mx-auto p-6 flex flex-col items-center">
-      <h1 className="text-2xl font-semibold mb-6">Login</h1>
-      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-lg"> {/* Updated Tailwind classes */}
-        <p className="text-slate-800 text-center"> {/* Updated Tailwind classes */}
-          Firebase Authentication Login/Signup form will go here.
-        </p>
-        {/* Basic form structure placeholder */}
-        <form className="mt-6 space-y-4">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-slate-700"> {/* Updated Tailwind classes */}
-              Email address
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              required
-              className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" // Updated Tailwind classes
-              placeholder="you@example.com"
-            />
-          </div>
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-slate-700"> {/* Updated Tailwind classes */}
-              Password
-            </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" // Updated Tailwind classes
-              placeholder="••••••••"
-            />
-          </div>
-          <div>
-            <button
-              type="submit"
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" // Updated Tailwind classes
-            >
-              Sign in
-            </button>
-          </div>
-        </form>
+    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+      <div className="p-8 bg-white rounded-lg shadow-md w-96">
+        <h2 className="mb-6 text-2xl font-bold text-center text-gray-800">
+          Welcome to LiveSolve
+        </h2>
+        <div className="space-y-4">
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Email Address"
+            className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Password"
+            className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        {error && <p className="mt-4 text-sm text-center text-red-500">{error}</p>}
+        <div className="flex justify-between mt-6 space-x-4">
+          <button
+            onClick={() => handleAuthAction(false)}
+            className="w-full py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 transition"
+          >
+            Login
+          </button>
+          <button
+            onClick={() => handleAuthAction(true)}
+            className="w-full py-2 text-white bg-green-600 rounded-md hover:bg-green-700 transition"
+          >
+            Sign Up
+          </button>
+        </div>
       </div>
     </div>
   );
-};
-
-export default LoginPage;
+}

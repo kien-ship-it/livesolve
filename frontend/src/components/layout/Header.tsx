@@ -1,35 +1,44 @@
-// frontend/src/components/layout/Header.tsx
-import React from 'react';
-import { Link } from 'react-router-dom';
+// src/components/layout/Header.tsx
 
-const Header: React.FC = () => {
+import { Link } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import { signOut } from 'firebase/auth';
+import { auth } from '../../firebaseConfig';
+
+export default function Header() {
+  const { currentUser } = useAuth(); // Tune in to our auth station!
+
+  const handleLogout = () => {
+    signOut(auth).catch((error) => console.error("Logout Error:", error));
+  };
+
   return (
-    <header className="bg-slate-800 text-white p-4 shadow-md"> {/* Updated Tailwind classes */}
-      <nav className="container mx-auto flex justify-between items-center">
-        <Link to="/" className="text-xl font-bold hover:text-slate-300"> {/* Updated Tailwind classes */}
-          LiveSolve MVP
-        </Link>
-        <div>
-          <Link
-            to="/problem"
-            className="px-3 py-2 rounded hover:bg-slate-700 transition-colors" // Updated Tailwind classes
-          >
-            Problem
-          </Link>
+    <header className="flex items-center justify-between p-4 bg-blue-100">
+      <Link to="/" className="text-xl font-bold text-blue-600">
+        LiveSolve
+      </Link>
+      <nav>
+        {currentUser ? (
+          // If user exists, show their email and a logout button
+          <div className="flex items-center space-x-4">
+            <span className="text-gray-700">{currentUser.email}</span>
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 text-white bg-orange-500 rounded-md hover:bg-orange-600"
+            >
+              Logout
+            </button>
+          </div>
+        ) : (
+          // If no user, show a link to the login page
           <Link
             to="/login"
-            className="ml-2 px-3 py-2 rounded hover:bg-slate-700 transition-colors" // Updated Tailwind classes
+            className="px-4 py-2 text-white bg-blue-500 rounded-md hover:bg-blue-600"
           >
             Login
           </Link>
-          {/* Placeholder for Logout - will be conditional later */}
-          {/* <button className="ml-2 px-3 py-2 rounded hover:bg-slate-700 transition-colors">
-            Logout
-          </button> */}
-        </div>
+        )}
       </nav>
     </header>
   );
-};
-
-export default Header;
+}
