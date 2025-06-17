@@ -6,6 +6,7 @@ import Footer from './components/layout/Footer';
 import HomePage from './pages/HomePage';
 import ProblemPage from './pages/ProblemPage';
 import LoginPage from './pages/LoginPage';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 
 const App: React.FC = () => {
   return (
@@ -15,7 +16,11 @@ const App: React.FC = () => {
         <main className="flex-grow container mx-auto py-8 px-4 sm:px-6 lg:px-8"> {/* Updated Tailwind classes */}
           <Routes>
             <Route path="/" element={<HomePage />} />
-            <Route path="/problem" element={<ProblemPage />} />
+            <Route path="/problem" element={
+              <ProtectedRoute>
+                <ProblemPage />
+              </ProtectedRoute>
+              } />
             <Route path="/login" element={<LoginPage />} />
             {/* You can add a 404 Not Found route later if you wish */}
             {/* <Route path="*" element={<NotFoundPage />} /> */}
