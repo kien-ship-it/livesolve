@@ -1,18 +1,42 @@
 // frontend/src/pages/ProblemPage.tsx
-import React from 'react';
+import React, { useState } from 'react';
+import type { ChangeEvent } from 'react';
 
 const ProblemPage: React.FC = () => {
-  //hardcoded problem statement
+  // State to hold the selected file
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  // Hardcoded problem details for the MVP
   const problem = {
     id: 'problem_1_algebra',
-    title: 'Algebra Problem',
+    title: 'Algebra Challenge: Solve for x',
     statement: 'Find the value of x in the following equation:',
     equation: '2x + 5 = 11',
-  }
+  };
+
+  // Handler for when a file is selected
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      setSelectedFile(event.target.files[0]);
+    }
+  };
+  
+  // Placeholder handler for the submission
+  const handleSubmit = () => {
+    if (!selectedFile) {
+      alert("Please select a file first!");
+      return;
+    }
+    // In a future step, this will send the file to the backend.
+    // For now, we just log it to the console.
+    console.log("Submitting file:", selectedFile.name);
+    alert(`(Pretend) Submitting: ${selectedFile.name}`);
+  };
+
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center pt-10">
-      <div className="w-full max-w-2xl px-6">
+      <div className="w-full max-w-2xl px-6 pb-12"> {/* Added pb-12 for spacing */}
         <div className="bg-white p-8 rounded-xl shadow-md border border-gray-200">
           
           {/* Problem Statement Section */}
@@ -24,14 +48,43 @@ const ProblemPage: React.FC = () => {
               {problem.equation}
             </p>
           </div>
+          
+          <hr className="my-8" />
 
-          {/* Placeholder for the next step */}
+          {/* --- Image Upload UI Section --- */}
           <div className="mt-6">
-            <h2 className="text-lg font-semibold text-gray-700">Your Solution</h2>
-            <p className="text-sm text-gray-500 mt-2">
-              (The file upload component will be added here in the next step.)
-            </p>
+            <h2 className="text-xl font-semibold text-gray-700 mb-4">Upload Your Solution</h2>
+            
+            <div className="flex flex-col items-center space-y-4">
+              {/* Custom-styled File Input Button */}
+              <label className="cursor-pointer bg-white border border-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-lg shadow-sm hover:bg-gray-50 transition-colors duration-200">
+                <span>Select an image</span>
+                <input 
+                  type="file" 
+                  className="hidden"
+                  accept="image/png, image/jpeg, image/jpg"
+                  onChange={handleFileChange}
+                />
+              </label>
+
+              {/* Display selected file name */}
+              {selectedFile && (
+                <div className="text-sm text-gray-600">
+                  Selected file: <span className="font-medium text-gray-800">{selectedFile.name}</span>
+                </div>
+              )}
+
+              {/* Submit Button */}
+              <button 
+                onClick={handleSubmit}
+                disabled={!selectedFile}
+                className="w-full max-w-xs bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-lg hover:bg-blue-700 transition-colors duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                Submit for Feedback
+              </button>
+            </div>
           </div>
+          {/* --- End of Image Upload UI Section --- */}
 
         </div>
       </div>
