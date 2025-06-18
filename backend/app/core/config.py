@@ -50,7 +50,7 @@ class Settings(BaseSettings):
                 password=db_password,
                 host=db_host_env,
                 port=db_port_val,
-                path=f"/{db_name or ''}",
+                path=f"{db_name or ''}",
             )
         else:
             raise ValueError("Cannot assemble DATABASE_URL: Insufficient DB connection parameters.")

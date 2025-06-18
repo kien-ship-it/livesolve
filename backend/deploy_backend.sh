@@ -23,7 +23,7 @@ CLOUD_RUN_SERVICE_NAME="livesolve-backend"
 GCS_BUCKET_NAME_VALUE="livesolve-mvp-images"
 DB_USER_VALUE="user"
 # DB_PASSWORD_VALUE is now expected from .deploy.env as DEPLOY_DB_PASSWORD
-DB_NAME_VALUE="livesolve-postgres-mvp"
+DB_NAME_VALUE="livesolve_app_db"
 DB_INSTANCE_CONNECTION_NAME_ENV_VAR_VALUE="${GCP_PROJECT_ID}:${GCP_REGION}:livesolve-postgres-mvp"
 # --- End Configuration Variables ---
 
