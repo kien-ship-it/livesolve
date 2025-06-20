@@ -18,7 +18,8 @@ origins = [
     "http://localhost:5173",  # Vite dev server
     "http://localhost:3000",  # React dev server
     "https://*.web.app",      # Firebase Hosting
-    "https://*.firebaseapp.com"  # Firebase Hosting
+    "https://*.firebaseapp.com",  # Firebase Hosting
+    "https://livesolve-backend-mvp-899268025543.asia-southeast1.run.app",  # Cloud Run backend
 ]
 
 # Add CORS middleware

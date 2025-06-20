@@ -4,8 +4,6 @@
 # docker build --platform linux/amd64 -t [YOUR_IMAGE_NAME] .
 
 # 1. Use an official Python runtime as a parent image
-...
-# 1. Use an official Python runtime as a parent image
 # Using a slim version for a smaller image size.
 # Ensure this Python version matches or is compatible with what your app needs (e.g., 3.10)
 FROM --platform=linux/amd64 python:3.10-slim

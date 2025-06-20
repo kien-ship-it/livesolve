@@ -1,6 +1,7 @@
 #!/bin/zsh
 # backend/deploy_backend.sh
 # Script to deploy a pre-built Docker image from Artifact Registry to Google Cloud Run.
+# to run: ./deploy_backend.sh
 
 # --- Source local deployment environment variables if file exists ---
 # This file should contain secrets and should NOT be committed to git.
@@ -23,7 +24,7 @@ GCP_REGION="asia-southeast1"
 CLOUD_RUN_SERVICE_NAME="livesolve-backend"
 ARTIFACT_REPO_NAME="livesolve-repo" # The repo we created
 IMAGE_NAME="backend-api"
-IMAGE_TAG="0.1.0" # Make sure this matches the tag you built and pushed
+IMAGE_TAG="0.1.3" # Make sure this matches the tag you built and pushed
 
 # Database and App environment variables
 GCS_BUCKET_NAME_VALUE="livesolve-mvp-images"
