@@ -2,9 +2,10 @@
 
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+
 from .core.config import settings
-# Import the dependency and the User model from your new security file
 from .core.security import get_current_user, User
+from .api.v1.api_v1 import api_router as api_v1_router # IMPORT OUR NEW V1 ROUTER
 
 app = FastAPI(
     title="LiveSolve AI API",
@@ -14,8 +15,8 @@ app = FastAPI(
 
 # Configure CORS
 origins = [
-    "<http://localhost:5173>",  # Vite dev server
-    "<http://localhost:3000>",  # React dev server
+    "http://localhost:5173",  # Vite dev server
+    "http://localhost:3000",  # React dev server
     "https://*.web.app",      # Firebase Hosting
     "https://*.firebaseapp.com"  # Firebase Hosting
 ]
@@ -30,7 +31,6 @@ app.add_middleware(
 )
 
 # --- PUBLIC ROUTES (No login required) ---
-
 @app.get("/")
 async def read_root():
     return {
@@ -38,23 +38,17 @@ async def read_root():
         "status": "healthy"
     }
 
-@app.get("/api/hello")
-async def hello():
-    return {"message": "Hello from the /api/hello endpoint!"}
+# --- API ROUTERS ---
+# Include the v1 router. All routes defined in api_v1.py will now be active
+# and prefixed with /api/v1.
+# So, our upload endpoint will be available at: /api/v1/submission/upload-image
+app.include_router(api_v1_router, prefix="/api/v1")
 
-@app.get("/health")
-async def health_check():
-    return {"status": "healthy"}
-
-# --- PROTECTED ROUTE (Login required) ---
-
-@app.get("/api/me", response_model=User)
+# --- EXAMPLE PROTECTED ROUTE (You can keep this for testing or remove it) ---
+@app.get("/api/me", response_model=User, tags=["Testing"])
 async def read_current_user_profile(current_user: User = Depends(get_current_user)):
     """
     Test endpoint to verify authentication.
     Returns the current user's data if the token is valid.
     """
-    # The code here only runs if `get_current_user` was successful.
-    # The `current_user` variable will contain the User object returned by the dependency.
     return current_user
-

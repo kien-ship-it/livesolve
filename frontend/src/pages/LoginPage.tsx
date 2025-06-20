@@ -5,9 +5,10 @@ import type { FormEvent } from 'react';
 import { auth } from '../firebaseConfig';
 import {
   createUserWithEmailAndPassword,
-  signInWithEmailAndPassword
+  signInWithEmailAndPassword,
 } from 'firebase/auth';
-import { useNavigate } from 'react-router-dom'; // Assuming you have react-router-dom
+import type { UserCredential } from 'firebase/auth';
+import { useNavigate } from 'react-router-dom';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -16,16 +17,33 @@ export default function LoginPage() {
   const navigate = useNavigate();
 
   const handleAuthAction = async (isSigningUp: boolean) => {
-    setError(''); // Clear previous errors
+    setError('');
     try {
+      let userCredential: UserCredential; // Define a variable to hold the result
+
       if (isSigningUp) {
-        await createUserWithEmailAndPassword(auth, email, password);
+        // Store the result of the auth action
+        userCredential = await createUserWithEmailAndPassword(auth, email, password);
       } else {
-        await signInWithEmailAndPassword(auth, email, password);
+        // Store the result of the auth action
+        userCredential = await signInWithEmailAndPassword(auth, email, password);
       }
-      // On success, Firebase's onAuthStateChanged listener in our context
-      // will pick up the change, and we can navigate away.
-      navigate('/problem'); // Navigate to the problem page after login/signup
+      
+      // --- START OF NEW CODE FOR TESTING ---
+      if (userCredential.user) {
+        // Ask Firebase for the ID token of the currently signed-in user
+        const idToken = await userCredential.user.getIdToken();
+
+        console.log("--- Firebase ID Token (for API testing) ---");
+        console.log(idToken);
+        console.log("-------------------------------------------");
+        
+        // You can now copy this token from the console and use it in the
+        // FastAPI /docs page with the "Bearer " prefix.
+      }
+      // --- END OF NEW CODE FOR TESTING ---
+
+      navigate('/problem');
     } catch (err: any) {
       setError(err.message);
       console.error("Authentication Error: ", err);
