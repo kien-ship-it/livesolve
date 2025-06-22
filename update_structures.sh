@@ -1,6 +1,7 @@
 #!/bin/bash
-# This script automatically generates and updates the file structure documentation.
-# It combines a manual header with an auto-generated tree structure.
+# This script automatically generates and updates the file structure documentatio
+# ./update_structures.sh
+
 
 # --- Configuration (EDIT THESE PATHS) ---
 # Directory where this script and its headers are located.
