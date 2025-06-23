@@ -1,8 +1,9 @@
 # backend/app/api/v1/endpoints/submission.py
 
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status
+# We now need to import our new feedback service
 from ....core.security import get_current_user, User
-from ....services import gcs_service, ocr_service 
+from ....services import gcs_service, ocr_service, feedback_service 
 from ....schemas import submission as submission_schema 
 
 router = APIRouter()
@@ -30,9 +31,6 @@ def upload_image_for_submission(
         raise HTTPException(status_code=500, detail="Could not upload file to cloud storage.")
 
     return {"gcs_url": gcs_url}
-
-
-# --- NEW ENDPOINT ADDED BELOW ---
 
 @router.post(
     "/ocr",
@@ -65,3 +63,37 @@ def process_image_for_ocr(
 
     # 3. Return the response
     return submission_schema.OCRResponse(ocr_text=extracted_text)
+
+# --- NEW ENDPOINT ADDED BELOW ---
+
+@router.post(
+    "/feedback/generate",
+    response_model=submission_schema.AIFeedbackResponse,
+    status_code=status.HTTP_200_OK
+)
+def generate_ai_feedback(
+    *,
+    request_body: submission_schema.AIFeedbackRequest,
+    current_user: User = Depends(get_current_user) # Ensures the user is authenticated
+):
+    """
+    Protected endpoint to generate AI feedback for a given text solution.
+
+    - Receives OCR'd text in the request body.
+    - Calls the feedback_service to get analysis from Gemini.
+    - Returns the AI-generated feedback.
+    """
+    # 1. Check for empty input
+    if not request_body.ocr_text or not request_body.ocr_text.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="OCR text cannot be empty."
+        )
+
+    # 2. Call the feedback service with the provided text
+    feedback = feedback_service.generate_feedback_from_text(
+        student_ocr_text=request_body.ocr_text
+    )
+
+    # 3. Return the feedback in the defined response shape
+    return submission_schema.AIFeedbackResponse(ai_feedback=feedback)

@@ -1,5 +1,5 @@
 # backend/app/core/config.py
-# (Updated with Firebase Initialization)
+# (Updated with Firebase Initialization and a dedicated AI_REGION)
 
 import firebase_admin
 from firebase_admin import credentials
@@ -8,12 +8,17 @@ from pydantic import PostgresDsn, validator, Field
 from typing import Optional, Dict, Any
 
 class Settings(BaseSettings):
-    # GCP Configuration
+    # --- Primary GCP Configuration ---
     GCP_PROJECT_ID: str
     GCS_BUCKET_NAME: str
+    # GCP_REGION is the main region for most services (Cloud Run, SQL, Storage)
+    GCP_REGION: str
+    # AI_REGION is the specific region for the AI model API call, which may differ.
+    AI_REGION: str # <--- ADDED: Dedicated setting for the AI service region
+    
     GOOGLE_APPLICATION_CREDENTIALS: Optional[str] = None
 
-    # Database Configuration
+    # --- Database Configuration ---
     DB_USER: str
     DB_PASSWORD: str
     DB_HOST: Optional[str] = None
@@ -55,11 +60,11 @@ class Settings(BaseSettings):
         else:
             raise ValueError("Cannot assemble DATABASE_URL: Insufficient DB connection parameters.")
 
-    # MVP Specifics
+    # --- MVP Specifics ---
     PROBLEM_ID_MVP: Optional[str] = Field(default=None)
     CANONICAL_SOLUTION_MVP: Optional[str] = Field(default=None)
 
-    # Firebase
+    # --- Firebase ---
     FIREBASE_PROJECT_ID: Optional[str] = Field(default=None)
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
@@ -77,5 +82,3 @@ try:
     print("Firebase Admin SDK initialized successfully.")
 except Exception as e:
     print(f"Error initializing Firebase Admin SDK: {e}")
-
-
