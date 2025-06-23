@@ -16,8 +16,8 @@ BACKEND_DIR="backend"
 FRONTEND_HEADER="${SCRIPT_DIR}/frontend_structure_header.md"
 BACKEND_HEADER="${SCRIPT_DIR}/backend_structure_header.md"
 
-FRONTEND_DOC_PATH="${SCRIPT_DIR}/FileStructureFrontEnd.md"
-BACKEND_DOC_PATH="${SCRIPT_DIR}/FileStructureBackEnd.md"
+FRONTEND_DOC_PATH="${SCRIPT_DIR}/CurrentFileStructureFrontEnd.md"
+BACKEND_DOC_PATH="${SCRIPT_DIR}/CurrentFileStructureBackEnd.md"
 
 # --- Script Logic (No need to edit below this line) ---
 echo "🤖 Starting to update file structure documentation..."
