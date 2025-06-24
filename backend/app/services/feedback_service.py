@@ -6,13 +6,14 @@ from google.genai import types
 
 from app.core.config import settings
 
-def generate_feedback_from_text(student_ocr_text: str) -> str:
+def generate_feedback_from_text(student_ocr_text: str, canonical_solution: str) -> str:
     """
     Analyzes student's OCR'd text using Vertex AI Gemini and generates feedback.
     This version is updated to comply with the new google-genai SDK syntax.
 
     Args:
         student_ocr_text: The text extracted from the student's handwritten solution.
+        canonical_solution: The correct, step-by-step solution for the problem.
 
     Returns:
         A string containing the AI-generated feedback.
@@ -23,20 +24,14 @@ def generate_feedback_from_text(student_ocr_text: str) -> str:
         client = genai.Client(
             vertexai=True,
             project=settings.GCP_PROJECT_ID,
-            location=settings.AI_REGION, # <-- CORRECT: Using our new dedicated setting
+            location=settings.AI_REGION,
         )
         
         # --- MVP Hardcoded Content ---
         problem_statement = "Solve for x: 2x + 5 = 11"
-        canonical_solution = """
-        Step 1: 2x + 5 = 11
-        Step 2: 2x = 11 - 5
-        Step 3: 2x = 6
-        Step 4: x = 6 / 2
-        Step 5: x = 3
-        """
+        # The canonical_solution is now passed in as an argument.
         
-        # 2. Construct the prompt for the AI (This logic remains the same)
+        # 2. Construct the prompt for the AI
         prompt = f"""
         You are an expert and friendly math tutor for middle school students.
         Your task is to analyze a student's handwritten solution to a math problem and provide constructive feedback.
@@ -99,7 +94,7 @@ def generate_feedback_from_text(student_ocr_text: str) -> str:
             config=config,
         )
         
-        # 5. Extract and return the text part of the response (This logic remains the same)
+        # 5. Extract and return the text part of the response
         if response.text:
             return response.text
         else:

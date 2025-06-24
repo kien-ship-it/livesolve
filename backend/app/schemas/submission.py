@@ -1,6 +1,46 @@
 # backend/app/schemas/submission.py
 
 from pydantic import BaseModel, HttpUrl
+from datetime import datetime
+
+# --- Schemas for Orchestration Endpoint ---
+
+class SubmissionBase(BaseModel):
+    """Base schema with fields common to both creation and response."""
+    image_gcs_url: HttpUrl
+    ocr_text: str
+    ai_feedback: str
+
+
+class SubmissionCreate(SubmissionBase):
+    """Schema for creating a new submission record in the database."""
+    user_id: str
+    problem_id: str
+
+
+class SubmissionResponse(SubmissionBase):
+    """Schema for the data returned to the frontend after a successful submission."""
+    pass
+
+
+class SubmissionInDBBase(SubmissionBase):
+    """
+    Schema representing a submission as it is stored in the database.
+    Includes database-generated fields like id and submitted_at.
+    """
+    id: int
+    user_id: str
+    problem_id: str
+    submitted_at: datetime
+
+    model_config = {
+        # This allows the Pydantic model to be created from an ORM model
+        # (e.g., a SQLAlchemy model instance)
+        "from_attributes": True
+    }
+
+
+# --- Schemas for individual service testing (can be kept or removed) ---
 
 # --- Schemas for OCR Processing ---
 
