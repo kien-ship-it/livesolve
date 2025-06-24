@@ -4,9 +4,6 @@
 # to run: ./deploy_backend.sh
 
 # --- Source local deployment environment variables if file exists ---
-# This file should contain secrets and should NOT be committed to git.
-# Example .deploy.env:
-# DEPLOY_DB_PASSWORD="your_secret_password"
 DEPLOY_ENV_FILE=".deploy.env"
 if [ -f "$DEPLOY_ENV_FILE" ]; then
   echo "Sourcing deployment secrets from $DEPLOY_ENV_FILE"
@@ -21,16 +18,16 @@ fi
 # --- Configuration Variables ---
 GCP_PROJECT_ID="fleet-automata-460507-p5"
 GCP_REGION="asia-southeast1"
+AI_REGION_VALUE="us-central1"
 CLOUD_RUN_SERVICE_NAME="livesolve-backend"
-ARTIFACT_REPO_NAME="livesolve-repo" # The repo we created
+ARTIFACT_REPO_NAME="livesolve-repo"
 IMAGE_NAME="backend-api"
-IMAGE_TAG="0.1.3" # Make sure this matches the tag you built and pushed
+IMAGE_TAG="0.2.3" # Using the same tag, no need to rebuild the image
 
 # Database and App environment variables
 GCS_BUCKET_NAME_VALUE="livesolve-mvp-images"
 DB_USER_VALUE="user"
 DB_NAME_VALUE="livesolve_app_db"
-# IMPORTANT: Use the correct Cloud SQL Instance Connection Name for your project
 DB_INSTANCE_CONNECTION_NAME_VALUE="${GCP_PROJECT_ID}:${GCP_REGION}:livesolve-postgres-mvp"
 
 # --- Construct the full image name ---
@@ -48,25 +45,27 @@ echo "Starting Cloud Run deployment for ${CLOUD_RUN_SERVICE_NAME}..."
 echo "Using image: ${IMAGE_NAME_TAG}"
 
 # --- CONSOLIDATED ENVIRONMENT VARIABLES STRING ---
-# This is a cleaner way to pass multiple variables.
 ENV_VARS="GCP_PROJECT_ID=${GCP_PROJECT_ID},"
-ENV_VARS+="FIREBASE_PROJECT_ID=${GCP_PROJECT_ID}," # Added this, it's needed for firebase-admin
+ENV_VARS+="FIREBASE_PROJECT_ID=${GCP_PROJECT_ID},"
 ENV_VARS+="GCS_BUCKET_NAME=${GCS_BUCKET_NAME_VALUE},"
+ENV_VARS+="GCP_REGION=${GCP_REGION},"
+ENV_VARS+="AI_REGION=${AI_REGION_VALUE},"
 ENV_VARS+="DB_USER=${DB_USER_VALUE},"
 ENV_VARS+="DB_PASSWORD=${DEPLOY_DB_PASSWORD},"
 ENV_VARS+="DB_NAME=${DB_NAME_VALUE},"
-# IMPORTANT: The key for this in your config.py is DB_INSTANCE_CONNECTION_NAME
 ENV_VARS+="DB_INSTANCE_CONNECTION_NAME=${DB_INSTANCE_CONNECTION_NAME_VALUE}"
 
 
-# --- THE DEPLOY COMMAND ---
-# CHANGED: Using --image instead of --source
+# --- THE DEPLOY COMMAND (CORRECTED SYNTAX) ---
+# The --add-cloudsql-instances flag is now correctly included as an argument
+# to the gcloud command, with the proper line continuation.
 gcloud run deploy "${CLOUD_RUN_SERVICE_NAME}" \
   --image "${IMAGE_NAME_TAG}" \
   --region "${GCP_REGION}" \
   --project "${GCP_PROJECT_ID}" \
   --allow-unauthenticated \
-  --set-env-vars="${ENV_VARS}"
+  --set-env-vars="${ENV_VARS}" \
+  --add-cloudsql-instances "${DB_INSTANCE_CONNECTION_NAME_VALUE}"
 
 EXIT_CODE=$? # Capture the exit code of gcloud deploy
 
