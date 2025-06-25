@@ -1,13 +1,12 @@
-// frontend/src/pages/ProblemPage.tsx
 import React, { useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-// --- NEW IMPORTS ---
 import { submitSolution } from '../services/apiService';
 import type { SubmissionResult } from '../services/apiService';
 import FeedbackDisplay from '../components/problem/FeedbackDisplay';
-// --- END NEW IMPORTS ---
-
+// --- NEW IMPORT ---
+import LoadingSpinner from '../components/shared/LoadingSpinner';
+// --- END NEW IMPORT ---
 
 const ProblemPage: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -26,12 +25,11 @@ const ProblemPage: React.FC = () => {
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
       setSelectedFile(event.target.files[0]);
-      setError(null); // Reset error on new file selection
-      setSubmissionResult(null); // Reset previous results
+      setError(null);
+      setSubmissionResult(null);
     }
   };
-  
-  // --- REFACTORED handleSubmit LOGIC ---
+
   const handleSubmit = async () => {
     if (!selectedFile) {
       setError("Please select a file first!");
@@ -48,18 +46,15 @@ const ProblemPage: React.FC = () => {
 
     try {
       const token = await currentUser.getIdToken();
-      // Call our new, centralized API service function
       const result = await submitSolution(selectedFile, token);
       setSubmissionResult(result);
     } catch (err: any) {
       console.error("Submission failed:", err);
-      // The apiService now throws a user-friendly error message
       setError(err.message || "An unknown error occurred during submission.");
     } finally {
       setIsLoading(false);
     }
   };
-
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center pt-10">
@@ -77,7 +72,6 @@ const ProblemPage: React.FC = () => {
           
           <hr className="my-8" />
 
-          {/* Only show the upload section if there are no results yet */}
           {!submissionResult && (
             <div className="mt-6">
               <h2 className="text-xl font-semibold text-gray-700 mb-4">Upload Your Solution</h2>
@@ -108,12 +102,14 @@ const ProblemPage: React.FC = () => {
             </div>
           )}
           
+          {/* --- MODIFIED LOADING INDICATOR SECTION --- */}
           {isLoading && (
-            <div className="mt-8 text-center">
+            <div className="mt-8 flex justify-center items-center space-x-3">
+              <LoadingSpinner />
               <p className="text-lg text-gray-600">Analyzing your submission, please wait...</p>
-              {/* Optional: Add a spinner component here */}
             </div>
           )}
+          {/* --- END MODIFIED SECTION --- */}
 
           {error && (
             <div className="mt-8 p-4 bg-red-100 border-l-4 border-red-500 text-red-700 rounded-md">
@@ -122,7 +118,6 @@ const ProblemPage: React.FC = () => {
             </div>
           )}
           
-          {/* --- REPLACED with new Component --- */}
           {submissionResult && (
             <>
               <FeedbackDisplay result={submissionResult} />

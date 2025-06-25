@@ -1,2 +1,27 @@
 /* frontend/src/index.css */
 @import "tailwindcss";
+
+
+.loader {
+    /* The "track" of the spinner */
+    border: 4px solid #f3f3f3; /* Light grey */
+    
+    /* The moving part of the spinner */
+    border-top: 4px solid #3b82f6; /* A nice Tailwind blue-500 color */
+    
+    /* Makes it a circle */
+    border-radius: 50%;
+    
+    /* Size of the spinner */
+    width: 24px;
+    height: 24px;
+    
+    /* The animation magic */
+    animation: spin 1s linear infinite;
+  }
+  
+  /* The animation keyframes */
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
