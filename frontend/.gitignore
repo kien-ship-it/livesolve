@@ -26,4 +26,4 @@ dist-ssr
 *.sw?
 Thumbs.db
 
-.env.local
+.env.development

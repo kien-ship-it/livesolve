@@ -1,5 +1,3 @@
-# backend/app/main.py
-
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -15,11 +13,11 @@ app = FastAPI(
 
 # Configure CORS
 origins = [
-    "http://localhost:5173",  # Vite dev server
-    "http://localhost:3000",  # React dev server
+    "http://localhost:5173",  # Vite dev server for local development
+    "https://fleet-automata-460507-p5.web.app", # <-- FIX: Explicitly add the production frontend URL
+    # The wildcards below are good fallbacks but being explicit is better.
     "https://*.web.app",      # Firebase Hosting
     "https://*.firebaseapp.com",  # Firebase Hosting
-    "https://livesolve-backend-mvp-899268025543.asia-southeast1.run.app",  # Cloud Run backend
 ]
 
 # Add CORS middleware
@@ -42,7 +40,6 @@ async def read_root():
 # --- API ROUTERS ---
 # Include the v1 router. All routes defined in api_v1.py will now be active
 # and prefixed with /api/v1.
-# So, our upload endpoint will be available at: /api/v1/submission/upload-image
 app.include_router(api_v1_router, prefix="/api/v1")
 
 # --- EXAMPLE PROTECTED ROUTE (You can keep this for testing or remove it) ---

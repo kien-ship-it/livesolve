@@ -1,7 +1,6 @@
 // src/pages/LoginPage.tsx
 
 import { useState } from 'react';
-import type { FormEvent } from 'react';
 import { auth } from '../firebaseConfig';
 import {
   createUserWithEmailAndPassword,
