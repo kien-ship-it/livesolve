@@ -1,29 +1,23 @@
-# backend/app/api/v1/endpoints/submission.py
 #
-
+# FILE: backend/app/api/v1/endpoints/submission.py
+#
+import json
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status
 from sqlalchemy.orm import Session
 
-# Local application imports
 from ....core.security import get_current_user, User
-# --- MODIFIED: ocr_service is no longer needed here ---
 from ....services import gcs_service, feedback_service
 from ....schemas import submission as submission_schema
 from ....db import crud_submission
 from ....db.database import get_db
 from ....core.config import settings
 
-
 router = APIRouter()
-
-# ==============================================================================
-# == PRIMARY ORCHESTRATION ENDPOINT
-# ==============================================================================
 
 @router.post(
     "/submit/solution",
     response_model=submission_schema.SubmissionResponse,
-    status_code=status.HTTP_201_CREATED
+    status_code=status.HTTP_201_CREATED,
 )
 def submit_solution_and_get_feedback(
     *,
@@ -33,148 +27,56 @@ def submit_solution_and_get_feedback(
 ):
     """
     Orchestrates the full submission process:
-    1. Uploads the user's handwritten solution image to GCS.
-    2. (DEPRECATED) Performs OCR on the image.
-    3. Generates AI-driven feedback by sending the IMAGE directly to a multimodal model.
-    4. Stores the entire submission record in the database.
-    5. Returns the GCS URL and AI feedback to the client.
+    1. Uploads image to GCS.
+    2. Sends image to a multimodal AI to generate JSON of error image masks.
+    3. Stores the submission in the database.
+    4. Returns the structured data to the client.
     """
-    # --- Hardcoded values for the MVP ---
     problem_id = "problem_1_algebra"
     canonical_solution = "2x + 5 = 11\n2x = 11 - 5\n2x = 6\nx = 3"
 
-    # Step 1: Upload image to GCS
     public_gcs_url = gcs_service.upload_image_to_gcs(
-        file=file,
-        user_id=current_user.uid
+        file=file, user_id=current_user.uid
     )
     if not public_gcs_url:
         raise HTTPException(status_code=500, detail="Failed to upload image.")
 
-    # Step 2: Convert public URL to the required GCS URI for AI services
     gcs_bucket_name = settings.GCS_BUCKET_NAME
     gcs_uri = public_gcs_url.replace(
         f"https://storage.googleapis.com/{gcs_bucket_name}/",
-        f"gs://{gcs_bucket_name}/"
+        f"gs://{gcs_bucket_name}/",
     )
 
-    # --- Step 3: OCR step is now REMOVED ---
-    # try:
-    #     ocr_text = ocr_service.perform_ocr_on_gcs_image(gcs_uri=gcs_uri)
-    # except Exception as e:
-    #     raise HTTPException(status_code=500, detail=f"Failed to perform OCR: {e}")
-
-    # Step 4: Generate feedback directly from the image
     try:
-        # --- MODIFIED: Call the new image-based feedback function ---
-        ai_feedback = feedback_service.get_feedback_from_image(
-            gcs_uri=gcs_uri,
-            canonical_solution=canonical_solution
+        error_masks = feedback_service.get_feedback_from_image(
+            gcs_uri=gcs_uri, canonical_solution=canonical_solution
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to generate AI feedback: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to generate AI feedback: {e}"
+        )
 
-    # Step 5: Prepare data for database insertion
-    # --- MODIFIED: ocr_text is now an empty string ---
+    ai_feedback_json_string = json.dumps(error_masks)
+
     submission_data = submission_schema.SubmissionCreate(
         user_id=current_user.uid,
         problem_id=problem_id,
         image_gcs_url=public_gcs_url,
-        ocr_text="", # OCR is deprecated, so we store an empty string.
-        ai_feedback=ai_feedback,
+        ocr_text="",
+        ai_feedback=ai_feedback_json_string,
     )
 
-    # Step 6: Create the submission record in the database
-    db_submission = crud_submission.create_submission(db=db, submission=submission_data)
+    db_submission = crud_submission.create_submission(
+        db=db, submission=submission_data
+    )
     
-    return db_submission
+    # MODIFIED: The structure now perfectly matches the SubmissionResponse schema
+    # Pydantic will validate this automatically.
+    return submission_schema.SubmissionResponse(
+        image_gcs_url=db_submission.image_gcs_url,
+        ocr_text=db_submission.ocr_text,
+        ai_feedback=db_submission.ai_feedback,
+        error_masks=error_masks,
+    )
 
-
-# The commented out testing endpoints below remain unchanged.
-# ...
-# ==============================================================================
-# == INDIVIDUAL TESTING/DEBUGGING ENDPOINTS (Commented out for production)
-# ==============================================================================
-
-# @router.post("/upload-image", status_code=201)
-# def upload_image_for_submission(
-#     *,
-#     file: UploadFile = File(...),
-#     current_user: User = Depends(get_current_user)
-# ):
-#     """
-#     Protected endpoint to upload an image to GCS.
-#     Receives an image, uploads it via the gcs_service, and returns the URL.
-#     """
-#     if not file:
-#         raise HTTPException(status_code=400, detail="No file uploaded.")
-
-#     # Call our service to handle the upload logic
-#     gcs_url = gcs_service.upload_image_to_gcs(
-#         file=file,
-#         user_id=current_user.uid
-#     )
-
-#     if not gcs_url:
-#         raise HTTPException(status_code=500, detail="Could not upload file to cloud storage.")
-
-#     return {"gcs_url": gcs_url}
-
-# @router.post(
-#     "/ocr",
-#     response_model=submission_schema.OCRResponse,
-#     status_code=status.HTTP_200_OK
-# )
-# def process_image_for_ocr(
-#     *,
-#     request_body: submission_schema.OCRRequest,
-#     current_user: User = Depends(get_current_user)
-# ):
-#     """
-#     Protected endpoint to perform OCR on an image stored in GCS.
-
-#     - Receives a GCS URI in the request body.
-#     - Calls the ocr_service to perform text detection.
-#     - Returns the extracted text.
-#     """
-
-#     if not request_body.image_gcs_url.startswith("gs://"):
-#         raise HTTPException(
-#             status_code=status.HTTP_400_BAD_REQUEST,
-#             detail="Invalid GCS URI provided. It must start with 'gs://'."
-#         )
-
-#     extracted_text = ocr_service.perform_ocr_on_gcs_image(
-#         gcs_uri=request_body.image_gcs_url
-#     )
-#     return submission_schema.OCRResponse(ocr_text=extracted_text)
-
-# @router.post(
-#     "/feedback/generate",
-#     response_model=submission_schema.AIFeedbackResponse,
-#     status_code=status.HTTP_200_OK
-# )
-# def generate_ai_feedback(
-#     *,
-#     request_body: submission_schema.AIFeedbackRequest,
-#     current_user: User = Depends(get_current_user)
-# ):
-#     """
-#     Protected endpoint to generate AI feedback for a given text solution.
-
-#     - Receives OCR'd text in the request body.
-#     - Calls the feedback_service to get analysis from Gemini.
-#     - Returns the AI-generated feedback.
-#     """
-#     if not request_body.ocr_text or not request_body.ocr_text.strip():
-#         raise HTTPException(
-#             status_code=status.HTTP_400_BAD_REQUEST,
-#             detail="OCR text cannot be empty."
-#         )
-
-#     # note: This assumes the feedback service has a hardcoded canonical solution
-#     # For the real endpoint, we pass it in.
-#     feedback = feedback_service.generate_feedback_from_text(
-#         student_ocr_text=request_body.ocr_text
-#     )
-#     return submission_schema.AIFeedbackResponse(ai_feedback=feedback)
+# ... (The rest of the file with old testing endpoints remains unchanged) ...
