@@ -1,27 +1,30 @@
-import React, { useState, useRef } from 'react'; // Import useRef
-// import type { ChangeEvent } from 'react'; // No longer needed
+import React, { useState, useRef, useEffect } from 'react'; // Import useEffect
 import { useAuth } from '../contexts/AuthContext';
 import { submitSolution } from '../services/apiService';
 import type { SubmissionResult } from '../services/apiService';
 import FeedbackDisplay from '../components/problem/FeedbackDisplay';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
-
-// --- NEW IMPORTS ---
 import { ReactSketchCanvas, type ReactSketchCanvasRef } from 'react-sketch-canvas';
-// --- END NEW IMPORTS ---
 
 
 const ProblemPage: React.FC = () => {
-  // const [selectedFile, setSelectedFile] = useState<File | null>(null); // Replaced by canvas ref
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [submissionResult, setSubmissionResult] = useState<SubmissionResult | null>(null);
   const { currentUser } = useAuth();
+  const canvasRef = useRef<ReactSketchCanvasRef>(null);
+  
+  // --- NEW STATE & EFFECT FOR TOOLS ---
+  type Tool = 'pen' | 'eraser';
+  const [activeTool, setActiveTool] = useState<Tool>('pen');
 
-  // --- NEW STATE & REF ---
-  // Create a ref to control the canvas component programmatically
-  const canvasRef = useRef<ReactSketchCanvasRef>(null); 
-  // --- END NEW STATE & REF ---
+  // This effect synchronizes our React state with the canvas library's mode.
+  useEffect(() => {
+    if (canvasRef.current) {
+      canvasRef.current.eraseMode(activeTool === 'eraser');
+    }
+  }, [activeTool]); // It runs only when `activeTool` changes.
+  // --- END NEW STATE & EFFECT ---
 
   const problem = {
     id: 'problem_1_algebra',
@@ -30,17 +33,24 @@ const ProblemPage: React.FC = () => {
     equation: '2x + 5 = 11',
   };
 
-  // handleFileChange is no longer needed
+  // --- NEW CANVAS CONTROL HANDLERS ---
+  const handleUndo = () => {
+    canvasRef.current?.undo();
+  };
+
+  const handleClear = () => {
+    canvasRef.current?.clearCanvas();
+  };
+  // --- END NEW CANVAS CONTROL HANDLERS ---
 
   const handleSubmit = async () => {
-    // --- MODIFIED SUBMISSION LOGIC ---
     if (!canvasRef.current) {
       setError("Canvas is not available.");
       return;
     }
 
-    const isEmpty = await canvasRef.current.exportPaths();
-    if (!isEmpty.length) {
+    const paths = await canvasRef.current.exportPaths();
+    if (!paths.length) {
       setError("Please write your solution on the canvas first!");
       return;
     }
@@ -55,15 +65,13 @@ const ProblemPage: React.FC = () => {
     setSubmissionResult(null);
 
     try {
-      // Export the canvas content as a PNG image
       const dataUri = await canvasRef.current.exportImage('png');
-      // Convert the data URI to a File object that our API service expects
       const response = await fetch(dataUri);
       const blob = await response.blob();
       const imageFile = new File([blob], 'solution.png', { type: 'image/png' });
       
       const token = await currentUser.getIdToken();
-      const result = await submitSolution(imageFile, token); // Use the new image file
+      const result = await submitSolution(imageFile, token);
       setSubmissionResult(result);
     } catch (err: any) {
       console.error("Submission failed:", err);
@@ -71,8 +79,17 @@ const ProblemPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-    // --- END MODIFIED SUBMISSION LOGIC ---
   };
+
+  // --- NEW STYLING FOR TOOLBAR BUTTONS ---
+  const getToolButtonStyles = (tool: Tool) => {
+    const baseStyles = "px-4 py-1.5 text-sm font-semibold rounded-md transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500";
+    if (activeTool === tool) {
+      return `${baseStyles} bg-blue-600 text-white shadow-sm`;
+    }
+    return `${baseStyles} bg-white hover:bg-gray-100 text-gray-700 border border-gray-300`;
+  };
+  // --- END NEW STYLING ---
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center pt-10">
@@ -91,19 +108,41 @@ const ProblemPage: React.FC = () => {
           <hr className="my-8" />
 
           {!submissionResult && (
-            // --- MODIFIED SUBMISSION AREA ---
             <div className="mt-6">
               <h2 className="text-xl font-semibold text-gray-700 mb-4">Write Your Solution Below</h2>
-              <div className="w-full h-96 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden">
+
+              {/* --- NEW CANVAS TOOLBAR --- */}
+              <div className="flex items-center space-x-2 mb-2 p-2 bg-gray-50 border border-gray-200 rounded-t-lg">
+                <button onClick={() => setActiveTool('pen')} className={getToolButtonStyles('pen')}>
+                  Pen
+                </button>
+                <button onClick={() => setActiveTool('eraser')} className={getToolButtonStyles('eraser')}>
+                  Eraser
+                </button>
+                <div className="border-l border-gray-300 h-6 mx-1"></div>
+                <button onClick={handleUndo} className="px-4 py-1.5 text-sm font-semibold rounded-md transition-colors duration-150 bg-white hover:bg-gray-100 text-gray-700 border border-gray-300">
+                  Undo
+                </button>
+                <button onClick={handleClear} className="px-4 py-1.5 text-sm font-semibold rounded-md transition-colors duration-150 bg-white hover:bg-gray-100 text-gray-700 border border-gray-300">
+                  Clear
+                </button>
+              </div>
+              {/* --- END NEW CANVAS TOOLBAR --- */}
+
+              {/* --- MODIFIED CANVAS CONTAINER --- */}
+              <div className="w-full h-96 border-2 border-l-2 border-r-2 border-b-2 border-gray-200 rounded-b-lg overflow-hidden">
                 <ReactSketchCanvas
                   ref={canvasRef}
                   strokeWidth={4}
                   strokeColor="black"
+                  eraserWidth={15} // Make eraser a bit bigger
                   canvasColor="white"
                   height="100%"
                   width="100%"
                 />
               </div>
+              {/* --- END MODIFIED CANVAS CONTAINER --- */}
+
               <div className="flex justify-center mt-6">
                 <button 
                   onClick={handleSubmit}
@@ -114,7 +153,6 @@ const ProblemPage: React.FC = () => {
                 </button>
               </div>
             </div>
-            // --- END MODIFIED SUBMISSION AREA ---
           )}
           
           {isLoading && (
@@ -138,8 +176,7 @@ const ProblemPage: React.FC = () => {
                 <button 
                   onClick={() => {
                     setSubmissionResult(null);
-                    // setSelectedFile(null); // No longer needed
-                    canvasRef.current?.clearCanvas(); // Clear the canvas for a new attempt
+                    handleClear(); // Use the new handler function
                   }}
                   className="bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors duration-200"
                 >
