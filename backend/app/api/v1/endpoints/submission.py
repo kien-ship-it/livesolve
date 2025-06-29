@@ -1,15 +1,17 @@
 # backend/app/api/v1/endpoints/submission.py
+#
 
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status
 from sqlalchemy.orm import Session
 
 # Local application imports
 from ....core.security import get_current_user, User
-from ....services import gcs_service, ocr_service, feedback_service
+# --- MODIFIED: ocr_service is no longer needed here ---
+from ....services import gcs_service, feedback_service
 from ....schemas import submission as submission_schema
-from ....db import crud_submission # New import for DB operations
-from ....db.database import get_db # New import for DB session dependency
-from ....core.config import settings # Import settings to get bucket name
+from ....db import crud_submission
+from ....db.database import get_db
+from ....core.config import settings
 
 
 router = APIRouter()
@@ -32,18 +34,16 @@ def submit_solution_and_get_feedback(
     """
     Orchestrates the full submission process:
     1. Uploads the user's handwritten solution image to GCS.
-    2. Performs OCR on the image.
-    3. Generates AI-driven feedback by comparing to a canonical solution.
+    2. (DEPRECATED) Performs OCR on the image.
+    3. Generates AI-driven feedback by sending the IMAGE directly to a multimodal model.
     4. Stores the entire submission record in the database.
-    5. Returns the GCS URL, OCR text, and AI feedback to the client.
+    5. Returns the GCS URL and AI feedback to the client.
     """
     # --- Hardcoded values for the MVP ---
     problem_id = "problem_1_algebra"
-    # This will be passed to the feedback service for comparison
     canonical_solution = "2x + 5 = 11\n2x = 11 - 5\n2x = 6\nx = 3"
 
     # Step 1: Upload image to GCS
-    # This service should return the public HTTPS URL
     public_gcs_url = gcs_service.upload_image_to_gcs(
         file=file,
         user_id=current_user.uid
@@ -51,46 +51,47 @@ def submit_solution_and_get_feedback(
     if not public_gcs_url:
         raise HTTPException(status_code=500, detail="Failed to upload image.")
 
-    # Step 2: Convert public URL to the required GCS URI for the Vision API
-    # e.g., "https://storage.googleapis.com/bucket-name/file.jpg" -> "gs://bucket-name/file.jpg"
+    # Step 2: Convert public URL to the required GCS URI for AI services
     gcs_bucket_name = settings.GCS_BUCKET_NAME
     gcs_uri = public_gcs_url.replace(
         f"https://storage.googleapis.com/{gcs_bucket_name}/",
         f"gs://{gcs_bucket_name}/"
     )
 
-    # Step 3: Perform OCR on the image in GCS
-    try:
-        ocr_text = ocr_service.perform_ocr_on_gcs_image(gcs_uri=gcs_uri)
-    except Exception as e:
-        # Generic catch for now, can be more specific later
-        raise HTTPException(status_code=500, detail=f"Failed to perform OCR: {e}")
+    # --- Step 3: OCR step is now REMOVED ---
+    # try:
+    #     ocr_text = ocr_service.perform_ocr_on_gcs_image(gcs_uri=gcs_uri)
+    # except Exception as e:
+    #     raise HTTPException(status_code=500, detail=f"Failed to perform OCR: {e}")
 
-    # Step 4: Generate feedback from the AI
+    # Step 4: Generate feedback directly from the image
     try:
-        ai_feedback = feedback_service.generate_feedback_from_text(
-            student_ocr_text=ocr_text,
-            canonical_solution=canonical_solution # Pass the hardcoded solution
+        # --- MODIFIED: Call the new image-based feedback function ---
+        ai_feedback = feedback_service.get_feedback_from_image(
+            gcs_uri=gcs_uri,
+            canonical_solution=canonical_solution
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate AI feedback: {e}")
 
     # Step 5: Prepare data for database insertion
+    # --- MODIFIED: ocr_text is now an empty string ---
     submission_data = submission_schema.SubmissionCreate(
         user_id=current_user.uid,
         problem_id=problem_id,
         image_gcs_url=public_gcs_url,
-        ocr_text=ocr_text,
+        ocr_text="", # OCR is deprecated, so we store an empty string.
         ai_feedback=ai_feedback,
     )
 
     # Step 6: Create the submission record in the database
     db_submission = crud_submission.create_submission(db=db, submission=submission_data)
     
-    # FastAPI will automatically serialize this into the SubmissionResponse model
     return db_submission
 
 
+# The commented out testing endpoints below remain unchanged.
+# ...
 # ==============================================================================
 # == INDIVIDUAL TESTING/DEBUGGING ENDPOINTS (Commented out for production)
 # ==============================================================================
