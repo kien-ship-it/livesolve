@@ -1,19 +1,27 @@
-import React, { useState } from 'react';
-import type { ChangeEvent } from 'react';
+import React, { useState, useRef } from 'react'; // Import useRef
+// import type { ChangeEvent } from 'react'; // No longer needed
 import { useAuth } from '../contexts/AuthContext';
 import { submitSolution } from '../services/apiService';
 import type { SubmissionResult } from '../services/apiService';
 import FeedbackDisplay from '../components/problem/FeedbackDisplay';
-// --- NEW IMPORT ---
 import LoadingSpinner from '../components/shared/LoadingSpinner';
-// --- END NEW IMPORT ---
+
+// --- NEW IMPORTS ---
+import { ReactSketchCanvas, type ReactSketchCanvasRef } from 'react-sketch-canvas';
+// --- END NEW IMPORTS ---
+
 
 const ProblemPage: React.FC = () => {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  // const [selectedFile, setSelectedFile] = useState<File | null>(null); // Replaced by canvas ref
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [submissionResult, setSubmissionResult] = useState<SubmissionResult | null>(null);
   const { currentUser } = useAuth();
+
+  // --- NEW STATE & REF ---
+  // Create a ref to control the canvas component programmatically
+  const canvasRef = useRef<ReactSketchCanvasRef>(null); 
+  // --- END NEW STATE & REF ---
 
   const problem = {
     id: 'problem_1_algebra',
@@ -22,19 +30,21 @@ const ProblemPage: React.FC = () => {
     equation: '2x + 5 = 11',
   };
 
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
-      setSelectedFile(event.target.files[0]);
-      setError(null);
-      setSubmissionResult(null);
-    }
-  };
+  // handleFileChange is no longer needed
 
   const handleSubmit = async () => {
-    if (!selectedFile) {
-      setError("Please select a file first!");
+    // --- MODIFIED SUBMISSION LOGIC ---
+    if (!canvasRef.current) {
+      setError("Canvas is not available.");
       return;
     }
+
+    const isEmpty = await canvasRef.current.exportPaths();
+    if (!isEmpty.length) {
+      setError("Please write your solution on the canvas first!");
+      return;
+    }
+    
     if (!currentUser) {
       setError("You must be logged in to submit a solution.");
       return;
@@ -45,8 +55,15 @@ const ProblemPage: React.FC = () => {
     setSubmissionResult(null);
 
     try {
+      // Export the canvas content as a PNG image
+      const dataUri = await canvasRef.current.exportImage('png');
+      // Convert the data URI to a File object that our API service expects
+      const response = await fetch(dataUri);
+      const blob = await response.blob();
+      const imageFile = new File([blob], 'solution.png', { type: 'image/png' });
+      
       const token = await currentUser.getIdToken();
-      const result = await submitSolution(selectedFile, token);
+      const result = await submitSolution(imageFile, token); // Use the new image file
       setSubmissionResult(result);
     } catch (err: any) {
       console.error("Submission failed:", err);
@@ -54,6 +71,7 @@ const ProblemPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
+    // --- END MODIFIED SUBMISSION LOGIC ---
   };
 
   return (
@@ -73,43 +91,38 @@ const ProblemPage: React.FC = () => {
           <hr className="my-8" />
 
           {!submissionResult && (
+            // --- MODIFIED SUBMISSION AREA ---
             <div className="mt-6">
-              <h2 className="text-xl font-semibold text-gray-700 mb-4">Upload Your Solution</h2>
-              <div className="flex flex-col items-center space-y-4">
-                <label className="cursor-pointer bg-white border border-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-lg shadow-sm hover:bg-gray-50 transition-colors duration-200">
-                  <span>{selectedFile ? 'Change image' : 'Select an image'}</span>
-                  <input 
-                    type="file" 
-                    className="hidden"
-                    accept="image/png, image/jpeg, image/jpg"
-                    onChange={handleFileChange}
-                    disabled={isLoading}
-                  />
-                </label>
-                {selectedFile && (
-                  <div className="text-sm text-gray-600">
-                    Selected file: <span className="font-medium text-gray-800">{selectedFile.name}</span>
-                  </div>
-                )}
+              <h2 className="text-xl font-semibold text-gray-700 mb-4">Write Your Solution Below</h2>
+              <div className="w-full h-96 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden">
+                <ReactSketchCanvas
+                  ref={canvasRef}
+                  strokeWidth={4}
+                  strokeColor="black"
+                  canvasColor="white"
+                  height="100%"
+                  width="100%"
+                />
+              </div>
+              <div className="flex justify-center mt-6">
                 <button 
                   onClick={handleSubmit}
-                  disabled={!selectedFile || isLoading}
+                  disabled={isLoading}
                   className="w-full max-w-xs bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-lg hover:bg-blue-700 transition-colors duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
                   {isLoading ? 'Analyzing...' : 'Submit for Feedback'}
                 </button>
               </div>
             </div>
+            // --- END MODIFIED SUBMISSION AREA ---
           )}
           
-          {/* --- MODIFIED LOADING INDICATOR SECTION --- */}
           {isLoading && (
             <div className="mt-8 flex justify-center items-center space-x-3">
               <LoadingSpinner />
               <p className="text-lg text-gray-600">Analyzing your submission, please wait...</p>
             </div>
           )}
-          {/* --- END MODIFIED SECTION --- */}
 
           {error && (
             <div className="mt-8 p-4 bg-red-100 border-l-4 border-red-500 text-red-700 rounded-md">
@@ -125,7 +138,8 @@ const ProblemPage: React.FC = () => {
                 <button 
                   onClick={() => {
                     setSubmissionResult(null);
-                    setSelectedFile(null);
+                    // setSelectedFile(null); // No longer needed
+                    canvasRef.current?.clearCanvas(); // Clear the canvas for a new attempt
                   }}
                   className="bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors duration-200"
                 >
