@@ -28,7 +28,7 @@ def submit_solution_and_get_feedback(
     """
     Orchestrates the full submission process:
     1. Uploads image to GCS.
-    2. Sends image to a multimodal AI to generate JSON of error image masks.
+    2. Sends image to a multimodal AI to generate error detections with bounding boxes.
     3. Stores the submission in the database.
     4. Returns the structured data to the client.
     """

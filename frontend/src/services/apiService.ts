@@ -2,24 +2,24 @@
 // FILE: frontend/src/services/apiService.ts
 //
 
-// --- MODIFIED: Types re-architected for image-based segmentation masks ---
+// --- MODIFIED: Types simplified to remove segmentation mask ---
 
 /**
- * Defines the structure for a single error mask object received from the API.
+ * Defines the structure for a single error detection object received from the API.
  */
 export interface ErrorMask {
   box_2d: [number, number, number, number]; // ymin, xmin, ymax, xmax (normalized to 1000)
-  mask: string; // The base64-encoded PNG image string for the mask
+  label: string; // Descriptive label for the error
 }
 
 /**
- * The main submission result interface, updated to use the new ErrorMask type.
+ * The main submission result interface, updated to use the simplified ErrorMask type.
  */
 export interface SubmissionResult {
   image_gcs_url: string;
   ocr_text: string;
   ai_feedback: string;
-  error_masks: ErrorMask[]; // An array of error mask objects
+  error_masks: ErrorMask[]; // An array of error detection objects
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;

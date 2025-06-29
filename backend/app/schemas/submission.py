@@ -5,15 +5,15 @@ from pydantic import BaseModel, HttpUrl
 from datetime import datetime
 from typing import List, Tuple, Any
 
-# --- MODIFIED: Schemas for Image Mask Segmentation ---
+# --- MODIFIED: Simplified ErrorMask without segmentation mask ---
 
 class ErrorMask(BaseModel):
     """
-    Defines the structure for a single error mask, including its
-    bounding box and the base64-encoded image data for the mask.
+    Defines the structure for a single error detection, including its
+    bounding box and descriptive label.
     """
     box_2d: Tuple[float, float, float, float] # ymin, xmin, ymax, xmax
-    mask: str # The base64 encoded image string for the mask
+    label: str # Descriptive label for the error
 
 # --- Schemas for Orchestration Endpoint ---
 
@@ -31,7 +31,7 @@ class SubmissionCreate(SubmissionBase):
 class SubmissionResponse(SubmissionBase):
     """
     Schema for the data returned to the frontend after a successful submission.
-    The 'error_masks' field now contains a list of rich mask objects.
+    The 'error_masks' field now contains a list of error detection objects.
     """
     error_masks: List[ErrorMask]
 

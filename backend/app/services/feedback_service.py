@@ -21,7 +21,7 @@ import requests
 def get_feedback_from_image(gcs_uri: str, canonical_solution: str) -> list:
     """
     FOR TESTING ONLY: Calls the Gemini public API with a personal API key.
-    Returns a list of error mask dicts.
+    Returns a list of error detection dicts with bounding boxes and labels.
     """
     try:
         # --- Step 1 - Download and Resize Image ---
@@ -57,14 +57,16 @@ def get_feedback_from_image(gcs_uri: str, canonical_solution: str) -> list:
         if image_b64.startswith("data:image/png;base64,"):
             image_b64 = image_b64[len("data:image/png;base64,"):]
 
-        # --- Step 3: Build API request to match segmentation-feature.tsx ---
+        # --- Step 3: Build API request with simplified prompt ---
         API_KEY = "AIzaSyDideGDIfiPOlfpO-JhOaKr8GI-yxV14Vs"  # <-- Replace with your key
         MODEL = "models/gemini-2.5-flash-preview-04-17"
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent?key={API_KEY}"
         headers = {"Content-Type": "application/json"}
         prompt_text = (
-            "Give the segmentation masks for the mathematical errors in this handwritten math solution image. "
-            "Output a JSON list of segmentation masks where each entry contains the 2D bounding box in 'box_2d', the segmentation mask in key 'mask', and the text label in the key 'label'. Use descriptive labels."
+            "Analyze this handwritten math solution image and identify any mathematical errors. "
+            "Output a JSON list where each entry contains the 2D bounding box in 'box_2d' (as [ymin, xmin, ymax, xmax] normalized to 1000) "
+            "and a descriptive label in 'label' explaining what the error is. "
+            "Use clear, educational labels like 'Incorrect arithmetic: 2+3=6 should be 2+3=5' or 'Missing negative sign'."
         )
         data = {
             "model": MODEL,
@@ -83,7 +85,7 @@ def get_feedback_from_image(gcs_uri: str, canonical_solution: str) -> list:
                 }
             ],
             "generationConfig": {
-                "temperature": 0
+                "temperature": 0.2
             }
         }
 
@@ -95,7 +97,8 @@ def get_feedback_from_image(gcs_uri: str, canonical_solution: str) -> list:
             print(f"Public Gemini API error: {e}\n{resp.text}")
             return []
         resp_json = resp.json()
-        # --- Step 5: Parse masks from the response ---
+        
+        # --- Step 5: Parse error detections from the response ---
         try:
             # Step 1: Extract the text
             text = resp_json["candidates"][0]["content"]["parts"][0]["text"]
@@ -107,29 +110,18 @@ def get_feedback_from_image(gcs_uri: str, canonical_solution: str) -> list:
             if not match:
                 print("No JSON list found in public API response.")
                 return []
-            mask_list = pyjson.loads(match.group(1))
+            error_list = pyjson.loads(match.group(1))
 
-            # Step 3: Clean up each mask
-            def clean_mask(m):
-                mask_str = m.get("mask", "")
-                # Remove data URL prefix if present
-                if mask_str.startswith("data:image/png;base64,"):
-                    mask_str = mask_str[len("data:image/png;base64,"):]
-                # Only keep if it looks like a PNG
-                if not mask_str.startswith("iVBORw0KGgo"):
-                    return None
-                # Optionally, rename text_content to label
-                label = m.get("text_content", "")
+            # Step 3: Clean up each error detection
+            def clean_error_detection(e):
                 return {
-                    "box_2d": m.get("box_2d", []),
-                    "mask": mask_str,
-                    "label": label
+                    "box_2d": e.get("box_2d", []),
+                    "label": e.get("label", "")
                 }
-            valid_masks = [clean_mask(m) for m in mask_list]
-            valid_masks = [m for m in valid_masks if m is not None]
-            return valid_masks
+            valid_errors = [clean_error_detection(e) for e in error_list]
+            return valid_errors
         except Exception as e:
-            print(f"Failed to parse masks from public API response: {e}\n{resp_json}")
+            print(f"Failed to parse error detections from public API response: {e}\n{resp_json}")
             return []
     except Exception as e:
         print(f"Unexpected error in feedback service: {type(e).__name__} - {e}")

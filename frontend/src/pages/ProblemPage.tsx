@@ -5,7 +5,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import type { MouseEvent } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { submitSolution } from '../services/apiService';
-// --- MODIFIED: Import new types for image masks ---
+// --- MODIFIED: Import types for error detections ---
 import type { SubmissionResult, ErrorMask } from '../services/apiService';
 import FeedbackDisplay from '../components/problem/FeedbackDisplay';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
@@ -38,7 +38,7 @@ const ProblemPage: React.FC = () => {
   const [startPoint, setStartPoint] = useState<Point | null>(null);
   const [selectionRect, setSelectionRect] = useState<Rect | null>(null);
   
-  // State for mask rendering
+  // State for error detection rendering
   const [sentImageDimensions, setSentImageDimensions] = useState<SentImageDimensions | null>(null);
   const [userPaths, setUserPaths] = useState<CanvasPath[]>([]);
 
@@ -46,7 +46,7 @@ const ProblemPage: React.FC = () => {
     sketchCanvasRef.current?.eraseMode(activeTool === 'eraser');
   }, [activeTool]);
 
-  // +++ MODIFIED: This entire effect is re-architected to render base64 image masks. +++
+  // +++ MODIFIED: This effect renders bounding boxes for error detections. +++
   useEffect(() => {
     const overlayCanvas = overlayCanvasRef.current;
     if (!overlayCanvas) return;
@@ -56,7 +56,7 @@ const ProblemPage: React.FC = () => {
     // Always clear the overlay first
     ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
     
-    // Ensure we have everything needed to render the masks
+    // Ensure we have everything needed to render the error detections
     if (
       submissionResult && 
       submissionResult.error_masks.length > 0 && 
@@ -75,8 +75,8 @@ const ProblemPage: React.FC = () => {
       const { error_masks } = submissionResult;
 
       // Draw a semi-transparent filled rectangle for each bounding box
-      error_masks.forEach((maskData) => {
-        const [ymin, xmin, ymax, xmax] = maskData.box_2d;
+      error_masks.forEach((errorData) => {
+        const [ymin, xmin, ymax, xmax] = errorData.box_2d;
         const targetX = (xmin / 1000) * overlayCanvas.width;
         const targetY = (ymin / 1000) * overlayCanvas.height;
         const targetWidth = ((xmax - xmin) / 1000) * overlayCanvas.width;
