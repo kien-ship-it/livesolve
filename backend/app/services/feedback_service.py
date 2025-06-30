@@ -65,7 +65,7 @@ def detect_math_regions_from_image(gcs_uri: str) -> dict:
             Never return masks. Limit to 25 objects.
             If an object is present multiple times, give each object a unique label according to its distinct characteristics (position, etc..).
             """,
-            temperature=0.2,
+            temperature=0,
             response_mime_type="application/json",
             response_schema=list[dict],
             thinking_config=ThinkingConfig(thinking_budget=0)
@@ -73,13 +73,13 @@ def detect_math_regions_from_image(gcs_uri: str) -> dict:
 
         # Step 4: Call the model
         response = client.models.generate_content(
-            model="gemini-2.5-flash-lite-preview-06-17",
+            model="gemini-2.5-flash",
             contents=[
                 Part.from_bytes(
                     data=in_mem_file.getvalue(),
                     mime_type="image/png",
                 ),
-                "Detect math handwriting, each syntax a unique item. Output the JSON list positions where each entry contains the 2D bounding box in 'box_2d' and 'a text label' in 'label'."
+                "Detect every numbers, letters or signs in handwriting with each a unique entry. Output the JSON list positions where each entry contains the 2D bounding box in 'box_2d' and 'a text label' in 'label'."
             ],
             config=config,
         )
