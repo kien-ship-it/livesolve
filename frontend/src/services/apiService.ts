@@ -2,24 +2,33 @@
 // FILE: frontend/src/services/apiService.ts
 //
 
-// --- MODIFIED: Types re-architected for image-based segmentation masks ---
+// --- UPDATED: Types for AI feedback with translation and error bounding boxes ---
 
 /**
- * Defines the structure for a single error mask object received from the API.
+ * Defines the structure for a single error entry received from the API.
  */
-export interface ErrorMask {
-  box_2d: [number, number, number, number]; // ymin, xmin, ymax, xmax (normalized to 1000)
-  mask: string; // The base64-encoded PNG image string for the mask
+export interface ErrorEntry {
+  error_text: string; // The text where the error occurs, taken from translated_handwriting
+  box_2d: number[]; // [x1, y1, x2, y2] coordinates of the error bounding box
 }
 
 /**
- * The main submission result interface, updated to use the new ErrorMask type.
+ * Defines the structure for the AI feedback response containing
+ * complete translation and list of errors with bounding boxes.
+ */
+export interface AIFeedbackData {
+  translated_handwriting: string; // Complete translation of all handwriting in the image
+  errors: ErrorEntry[]; // List of error entries with bounding boxes
+}
+
+/**
+ * The main submission result interface, updated to use the new AI feedback structure.
  */
 export interface SubmissionResult {
   image_gcs_url: string;
   ocr_text: string;
-  ai_feedback: string;
-  error_masks: ErrorMask[]; // An array of error mask objects
+  ai_feedback: string; // JSON string of the AI feedback data
+  ai_feedback_data: AIFeedbackData; // Structured AI feedback data
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;

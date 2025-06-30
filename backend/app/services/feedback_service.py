@@ -1,4 +1,3 @@
-#
 # FILE: backend/app/services/feedback_service.py
 #
 import json
@@ -18,15 +17,28 @@ from app.core.config import settings
 # --- FOR TESTING: Use Gemini public API with personal API key ---
 import requests
 
-def get_feedback_from_image(gcs_uri: str, canonical_solution: str) -> list:
+def get_feedback_from_image(gcs_uri: str, canonical_solution: str) -> dict:
     """
-    FOR TESTING ONLY: Calls the Gemini public API with a personal API key.
-    Returns a list of error mask dicts.
+    Adapter: Calls detect_math_regions_from_image and returns its result. All other features are disabled for testing.
+    """
+    return detect_math_regions_from_image(gcs_uri)
+
+# ---
+# (Commented out: Vertex AI/SDK implementation)
+# def get_feedback_from_image(...):
+#     ...
+
+def generate_feedback_from_text(student_ocr_text: str, canonical_solution: str) -> str:
+    """(This function is now DEPRECATED in the main workflow)"""
+    return "This function is deprecated."
+
+def detect_math_regions_from_image(gcs_uri: str) -> dict:
+    """
+    Detects all math regions in the image and returns bounding boxes (normalized to 0-1000) with placeholder labels.
     """
     try:
-        # --- Step 1 - Download and Resize Image ---
+        # --- Step 1 - Download and Prepare Image for Model ---
         storage_client = storage.Client(project=settings.GCP_PROJECT_ID)
-        
         bucket_name = gcs_uri.split("/")[2]
         blob_name = "/".join(gcs_uri.split("/")[3:])
         bucket = storage_client.bucket(bucket_name)
@@ -39,6 +51,8 @@ def get_feedback_from_image(gcs_uri: str, canonical_solution: str) -> list:
         with Image.open(in_mem_file) as img:
             if img.mode != 'RGB':
                 img = img.convert('RGB')
+            # The model handles various sizes, but resizing can speed up the process.
+            # We don't need to save dimensions for scaling as the model returns normalized coords.
             max_size = 640
             scale = min(max_size / img.width, max_size / img.height)
             new_width = int(img.width * scale)
@@ -47,24 +61,20 @@ def get_feedback_from_image(gcs_uri: str, canonical_solution: str) -> list:
             output_buffer = io.BytesIO()
             resized_img.save(output_buffer, format="PNG")
             resized_image_bytes = output_buffer.getvalue()
-            # Save for debugging
-            with open("/tmp/debug_image.png", "wb") as debug_f:
-                debug_f.write(resized_image_bytes)
 
-        # --- Step 2: Encode as base64 for public API ---
-        # Remove any data URL prefix if present (shouldn't be, but for safety)
         image_b64 = base64.b64encode(resized_image_bytes).decode("utf-8")
         if image_b64.startswith("data:image/png;base64,"):
             image_b64 = image_b64[len("data:image/png;base64,"):]
 
-        # --- Step 3: Build API request to match segmentation-feature.tsx ---
-        API_KEY = "AIzaSyDideGDIfiPOlfpO-JhOaKr8GI-yxV14Vs"  # <-- Replace with your key
-        MODEL = "models/gemini-2.5-flash-preview-04-17"
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent?key={API_KEY}"
+        # --- Step 2: Build API request for math region detection ---
+        API_KEY = "AIzaSyDideGDIfiPOlfpO-JhOaKr8GI-yxV14Vs"
+        MODEL = "models/gemini-2.5-flash"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={API_KEY}"
         headers = {"Content-Type": "application/json"}
+        # The reference implementation `bounding-box-pipeline.tsx` implies the model
+        # returns coordinates normalized to 1000 in [ymin, xmin, ymax, xmax] format.
         prompt_text = (
-            "Give the segmentation masks for the specific and unique mathematical errors in this handwritten math solution image. Sometimes the error happens in a chain, choose the exact momment of the chain that caused the error."
-            "Output a JSON list of segmentation masks where each entry contains the error's 2D bounding box in 'box_2d', segmentation mask in key 'mask', the text label in the key 'label'"
+            "Detect all math, with no more than 20 items. Output a json list where each entry contains the 2D bounding box in 'box_2d' and 'label'."
         )
         data = {
             "model": MODEL,
@@ -83,65 +93,68 @@ def get_feedback_from_image(gcs_uri: str, canonical_solution: str) -> list:
                 }
             ],
             "generationConfig": {
-                "temperature": 0.2
+                "temperature": 0
             }
         }
 
-        # --- Step 4: Call the API ---
         resp = requests.post(url, headers=headers, json=data)
         try:
             resp.raise_for_status()
         except Exception as e:
             print(f"Public Gemini API error: {e}\n{resp.text}")
-            return []
+            return {"translated_handwriting": "", "errors": []}
         resp_json = resp.json()
-        # --- Step 5: Parse masks from the response ---
-        try:
-            # Step 1: Extract the text
-            text = resp_json["candidates"][0]["content"]["parts"][0]["text"]
 
-            # Step 2: Find the JSON list inside triple backticks
+        # --- Step 3: Parse response for bounding boxes ---
+        try:
+            text = resp_json["candidates"][0]["content"]["parts"][0]["text"]
+            print(f"DEBUG: Raw API response text: {text[:500]}...")
             import re
             import json as pyjson
             match = re.search(r'```json\s*(\[.*?\])\s*```', text, re.DOTALL)
             if not match:
+                match = re.search(r'```json\s*(\[.*\])\s*```', text, re.DOTALL) # A slightly more lenient regex
+            if not match:
+                match = re.search(r'```\s*(\[.*?\])\s*```', text, re.DOTALL) # A more lenient regex
+            if not match:
+                print("DEBUG: Regex failed, printing full text for manual inspection:")
+                print(text)
                 print("No JSON list found in public API response.")
-                return []
-            mask_list = pyjson.loads(match.group(1))
+                return {"translated_handwriting": "", "errors": []}
+            print(f"DEBUG: Regex matched: {match.group(0)[:200]}")
+            region_list = pyjson.loads(match.group(1))
+            print(f"DEBUG: Parsed region list: {region_list}")
 
-            # Step 3: Clean up each mask
-            def clean_mask(m):
-                mask_str = m.get("mask", "")
-                # Remove data URL prefix if present
-                if mask_str.startswith("data:image/png;base64,"):
-                    mask_str = mask_str[len("data:image/png;base64,"):]
-                # Only keep if it looks like a PNG
-                if not mask_str.startswith("iVBORw0KGgo"):
-                    return None
-                # Optionally, rename text_content to label
-                label = m.get("text_content", "")
-                return {
-                    "box_2d": m.get("box_2d", []),
-                    "mask": mask_str,
-                    "label": label
-                }
-            valid_masks = [clean_mask(m) for m in mask_list]
-            valid_masks = [m for m in valid_masks if m is not None]
-            return valid_masks
+            errors = []
+            for region in region_list:
+                box_2d_from_model = region.get("box_2d", [])
+                
+                # --- FIX: Correctly handle coordinate format ---
+                # The model, as per the reference implementation, returns coordinates normalized
+                # to 1000 in the format [ymin, xmin, ymax, xmax].
+                # The frontend expects the format [xmin, ymin, xmax, ymax].
+                # We do not need to perform any scaling, just re-order the coordinates.
+                if len(box_2d_from_model) == 4:
+                    y1, x1, y2, x2 = box_2d_from_model
+                    # Swap to match frontend's expected format [x1, y1, x2, y2]
+                    norm_box_2d = [x1, y1, x2, y2]
+                else:
+                    norm_box_2d = [0, 0, 0, 0] # Default for malformed data
+                
+                errors.append({
+                    "error_text": "AI detected math region",  # Placeholder
+                    "box_2d": norm_box_2d
+                })
+
+            return {
+                "translated_handwriting": "AI detected math regions",  # Placeholder
+                "errors": errors
+            }
         except Exception as e:
-            print(f"Failed to parse masks from public API response: {e}\n{resp_json}")
-            return []
+            print(f"Failed to parse math region detection from public API response: {e}\n{resp_json}")
+            return {"translated_handwriting": "", "errors": []}
     except Exception as e:
-        print(f"Unexpected error in feedback service: {type(e).__name__} - {e}")
+        print(f"Unexpected error in math region detection: {type(e).__name__} - {e}")
         import traceback
         traceback.print_exc()
-        return []
-
-# ---
-# (Commented out: Vertex AI/SDK implementation)
-# def get_feedback_from_image(...):
-#     ...
-
-def generate_feedback_from_text(student_ocr_text: str, canonical_solution: str) -> str:
-    """(This function is now DEPRECATED in the main workflow)"""
-    return "This function is deprecated."
+        return {"translated_handwriting": "", "errors": []}

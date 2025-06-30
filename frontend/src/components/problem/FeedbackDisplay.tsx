@@ -23,22 +23,40 @@ const FeedbackDisplay: React.FC<FeedbackDisplayProps> = ({ result }) => {
           />
         </div>
 
-        {/* Right Column: OCR and AI Feedback */}
+        {/* Right Column: Translation and Error Analysis */}
         <div className="space-y-6">
-          {/* OCR Text Section */}
+          {/* Translated Handwriting Section */}
           <div>
-            <h4 className="font-semibold text-gray-700">Extracted Text (OCR)</h4>
-            <pre className="mt-1 p-3 bg-gray-50 rounded-md text-sm text-gray-800 whitespace-pre-wrap font-mono border border-gray-200 h-40 overflow-y-auto">
-              {result.ocr_text || "(No text detected)"}
+            <h4 className="font-semibold text-gray-700">Translated Handwriting</h4>
+            <pre className="mt-1 p-3 bg-green-50 rounded-md text-sm text-green-900 whitespace-pre-wrap font-mono border border-green-200 h-40 overflow-y-auto">
+              {result.ai_feedback_data?.translated_handwriting || "(No translation available)"}
             </pre>
           </div>
 
-          {/* AI Feedback Section */}
+          {/* Error Analysis Section */}
           <div>
-            <h4 className="font-semibold text-gray-700">AI Feedback</h4>
-            <pre className="mt-1 p-3 bg-blue-50 rounded-md text-sm text-blue-900 whitespace-pre-wrap font-sans border border-blue-200 h-56 overflow-y-auto">
-              {result.ai_feedback || "(No feedback generated)"}
-            </pre>
+            <h4 className="font-semibold text-gray-700">Error Analysis</h4>
+            {result.ai_feedback_data?.errors && result.ai_feedback_data.errors.length > 0 ? (
+              <div className="mt-1 space-y-3 max-h-56 overflow-y-auto">
+                {result.ai_feedback_data.errors.map((error, index) => (
+                  <div key={index} className="p-3 bg-red-50 rounded-md border border-red-200">
+                    <div className="text-sm text-red-900 font-medium mb-1">
+                      Error {index + 1}:
+                    </div>
+                    <div className="text-sm text-red-800 font-mono">
+                      "{error.error_text}"
+                    </div>
+                    <div className="text-xs text-red-600 mt-1">
+                      Location: [{error.box_2d.join(', ')}]
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-1 p-3 bg-green-50 rounded-md text-sm text-green-900 border border-green-200">
+                No errors detected! Great work!
+              </div>
+            )}
           </div>
         </div>
       </div>

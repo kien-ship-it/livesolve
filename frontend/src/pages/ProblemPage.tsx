@@ -5,8 +5,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import type { MouseEvent } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { submitSolution } from '../services/apiService';
-// --- MODIFIED: Import new types for image masks ---
-import type { SubmissionResult, ErrorMask } from '../services/apiService';
+// --- UPDATED: Import new types for AI feedback with translation and error bounding boxes ---
+import type { SubmissionResult, ErrorEntry } from '../services/apiService';
 import FeedbackDisplay from '../components/problem/FeedbackDisplay';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
 import { ReactSketchCanvas, type ReactSketchCanvasRef, type CanvasPath } from 'react-sketch-canvas';
@@ -38,7 +38,7 @@ const ProblemPage: React.FC = () => {
   const [startPoint, setStartPoint] = useState<Point | null>(null);
   const [selectionRect, setSelectionRect] = useState<Rect | null>(null);
   
-  // State for mask rendering
+  // State for error bounding box rendering
   const [sentImageDimensions, setSentImageDimensions] = useState<SentImageDimensions | null>(null);
   const [userPaths, setUserPaths] = useState<CanvasPath[]>([]);
 
@@ -46,7 +46,7 @@ const ProblemPage: React.FC = () => {
     sketchCanvasRef.current?.eraseMode(activeTool === 'eraser');
   }, [activeTool]);
 
-  // +++ MODIFIED: This entire effect is re-architected to render base64 image masks. +++
+  // +++ UPDATED: This effect now renders error bounding boxes instead of segmentation masks +++
   useEffect(() => {
     const overlayCanvas = overlayCanvasRef.current;
     if (!overlayCanvas) return;
@@ -56,10 +56,11 @@ const ProblemPage: React.FC = () => {
     // Always clear the overlay first
     ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
     
-    // Ensure we have everything needed to render the masks
+    // Ensure we have everything needed to render the error bounding boxes
     if (
       submissionResult && 
-      submissionResult.error_masks.length > 0 && 
+      submissionResult.ai_feedback_data?.errors && 
+      submissionResult.ai_feedback_data.errors.length > 0 && 
       sentImageDimensions && 
       sketchCanvasRef.current && 
       canvasContainerRef.current
@@ -72,17 +73,22 @@ const ProblemPage: React.FC = () => {
       // Restore the user's drawing on the main canvas
       sketchCanvasRef.current.loadPaths(userPaths);
       
-      const { error_masks } = submissionResult;
+      const { errors } = submissionResult.ai_feedback_data;
 
-      // Draw a semi-transparent filled rectangle for each bounding box
-      error_masks.forEach((maskData) => {
-        const [ymin, xmin, ymax, xmax] = maskData.box_2d;
-        const targetX = (xmin / 1000) * overlayCanvas.width;
-        const targetY = (ymin / 1000) * overlayCanvas.height;
-        const targetWidth = ((xmax - xmin) / 1000) * overlayCanvas.width;
-        const targetHeight = ((ymax - ymin) / 1000) * overlayCanvas.height;
+      // Draw a semi-transparent filled rectangle for each error bounding box
+      errors.forEach((errorData) => {
+        const [x1, y1, x2, y2] = errorData.box_2d;
+        const targetX = (x1 / 1000) * overlayCanvas.width;
+        const targetY = (y1 / 1000) * overlayCanvas.height;
+        const targetWidth = ((x2 - x1) / 1000) * overlayCanvas.width;
+        const targetHeight = ((y2 - y1) / 1000) * overlayCanvas.height;
         ctx.fillStyle = 'rgba(239, 68, 68, 0.3)'; // Red with 30% opacity
         ctx.fillRect(targetX, targetY, targetWidth, targetHeight);
+        
+        // Add a border to make the error area more visible
+        ctx.strokeStyle = 'rgba(239, 68, 68, 0.8)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(targetX, targetY, targetWidth, targetHeight);
       });
     }
   }, [submissionResult, sentImageDimensions, userPaths]);
@@ -198,9 +204,9 @@ const ProblemPage: React.FC = () => {
           </div>
           <hr className="my-8" />
           
-          {submissionResult && submissionResult.error_masks.length === 0 && (
+          {submissionResult && (!submissionResult.ai_feedback_data?.errors || submissionResult.ai_feedback_data.errors.length === 0) && (
             <>
-              <FeedbackDisplay result={{...submissionResult, ai_feedback: "Great job! We didn't find any errors in your work."}} />
+              <FeedbackDisplay result={submissionResult} />
               <div className="text-center mt-8">
                 <button onClick={() => { setSubmissionResult(null); handleClear(); setSentImageDimensions(null); }} className="bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">
                   Submit Another Solution
@@ -209,7 +215,7 @@ const ProblemPage: React.FC = () => {
             </>
           )}
 
-          {(!submissionResult || (submissionResult && submissionResult.error_masks.length > 0)) && (
+          {(!submissionResult || (submissionResult && submissionResult.ai_feedback_data?.errors && submissionResult.ai_feedback_data.errors.length > 0)) && (
             <div className="mt-6">
               <h2 className="text-xl font-semibold text-gray-700 mb-4">
                 {submissionResult ? "Here is your feedback:" : "Write Your Solution Below"}
@@ -241,7 +247,7 @@ const ProblemPage: React.FC = () => {
           {isLoading && <div className="mt-8 flex justify-center items-center space-x-3"><LoadingSpinner /><p className="text-lg text-gray-600">Analyzing...</p></div>}
           {error && <div className="mt-8 p-4 bg-red-100 border-l-4 border-red-500 text-red-700 rounded-md"><p className="font-bold">Error</p><p>{error}</p></div>}
 
-          {submissionResult && submissionResult.error_masks.length > 0 && (
+          {submissionResult && submissionResult.ai_feedback_data?.errors && submissionResult.ai_feedback_data.errors.length > 0 && (
               <div className="text-center mt-8">
                 <button onClick={() => { setSubmissionResult(null); handleClear(); setSentImageDimensions(null); }} className="bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">
                   Try Again

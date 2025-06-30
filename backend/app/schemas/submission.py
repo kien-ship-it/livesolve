@@ -5,15 +5,23 @@ from pydantic import BaseModel, HttpUrl
 from datetime import datetime
 from typing import List, Tuple, Any
 
-# --- MODIFIED: Schemas for Image Mask Segmentation ---
+# --- UPDATED: Schemas for AI Feedback with Translation and Error Bounding Boxes ---
 
-class ErrorMask(BaseModel):
+class ErrorEntry(BaseModel):
     """
-    Defines the structure for a single error mask, including its
-    bounding box and the base64-encoded image data for the mask.
+    Defines the structure for a single error entry, including its
+    bounding box and the error text from the translated handwriting.
     """
-    box_2d: Tuple[float, float, float, float] # ymin, xmin, ymax, xmax
-    mask: str # The base64 encoded image string for the mask
+    error_text: str  # The text where the error occurs, taken from translated_handwriting
+    box_2d: List[float]  # [x1, y1, x2, y2] coordinates of the error bounding box
+
+class AIFeedbackResponse(BaseModel):
+    """
+    Defines the structure for the AI feedback response containing
+    complete translation and list of errors with bounding boxes.
+    """
+    translated_handwriting: str  # Complete translation of all handwriting in the image
+    errors: List[ErrorEntry]  # List of error entries with bounding boxes
 
 # --- Schemas for Orchestration Endpoint ---
 
@@ -31,9 +39,9 @@ class SubmissionCreate(SubmissionBase):
 class SubmissionResponse(SubmissionBase):
     """
     Schema for the data returned to the frontend after a successful submission.
-    The 'error_masks' field now contains a list of rich mask objects.
+    The 'ai_feedback_data' field now contains the structured AI feedback with translation and errors.
     """
-    error_masks: List[ErrorMask]
+    ai_feedback_data: AIFeedbackResponse
 
 # --- Schemas for Database Model ---
 
@@ -56,5 +64,5 @@ class OCRResponse(BaseModel):
 class AIFeedbackRequest(BaseModel):
     ocr_text: str
 
-class AIFeedbackResponse(BaseModel):
+class AIFeedbackResponseOld(BaseModel):
     ai_feedback: str

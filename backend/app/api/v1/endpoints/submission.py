@@ -28,7 +28,7 @@ def submit_solution_and_get_feedback(
     """
     Orchestrates the full submission process:
     1. Uploads image to GCS.
-    2. Sends image to a multimodal AI to generate JSON of error image masks.
+    2. Sends image to a multimodal AI to generate translation and error bounding boxes.
     3. Stores the submission in the database.
     4. Returns the structured data to the client.
     """
@@ -48,7 +48,7 @@ def submit_solution_and_get_feedback(
     )
 
     try:
-        error_masks = feedback_service.get_feedback_from_image(
+        ai_feedback_data = feedback_service.get_feedback_from_image(
             gcs_uri=gcs_uri, canonical_solution=canonical_solution
         )
     except Exception as e:
@@ -56,13 +56,14 @@ def submit_solution_and_get_feedback(
             status_code=500, detail=f"Failed to generate AI feedback: {e}"
         )
 
-    ai_feedback_json_string = json.dumps(error_masks)
+    # Store the AI feedback as JSON string in the database
+    ai_feedback_json_string = json.dumps(ai_feedback_data)
 
     submission_data = submission_schema.SubmissionCreate(
         user_id=current_user.uid,
         problem_id=problem_id,
         image_gcs_url=public_gcs_url,
-        ocr_text="",
+        ocr_text="",  # We're not using OCR text anymore, using AI translation instead
         ai_feedback=ai_feedback_json_string,
     )
 
@@ -70,13 +71,12 @@ def submit_solution_and_get_feedback(
         db=db, submission=submission_data
     )
     
-    # MODIFIED: The structure now perfectly matches the SubmissionResponse schema
-    # Pydantic will validate this automatically.
+    # Return the structured response with AI feedback data
     return submission_schema.SubmissionResponse(
         image_gcs_url=db_submission.image_gcs_url,
         ocr_text=db_submission.ocr_text,
         ai_feedback=db_submission.ai_feedback,
-        error_masks=error_masks,
+        ai_feedback_data=ai_feedback_data,
     )
 
 # ... (The rest of the file with old testing endpoints remains unchanged) ...
