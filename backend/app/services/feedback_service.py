@@ -55,31 +55,33 @@ def detect_math_regions_from_image(gcs_uri: str) -> dict:
         client = genai.Client(
             vertexai=True,
             project=settings.GCP_PROJECT_ID,
-            location='global',
+            location=settings.AI_REGION,
         )
 
         # Step 3: Build config for bounding box detection
         config = GenerateContentConfig(
             system_instruction="""
             Return bounding boxes as an array with labels.
-            Never return masks. Limit to 25 objects.
+            Never return masks. Limit to 10 objects.
             If an object is present multiple times, give each object a unique label according to its distinct characteristics (position, etc..).
             """,
-            temperature=0,
+            temperature=0.5,
             response_mime_type="application/json",
             response_schema=list[dict],
-            thinking_config=ThinkingConfig(thinking_budget=0)
+            thinking_config=ThinkingConfig(thinking_budget=512)
         )
 
         # Step 4: Call the model
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-2.5-pro",
             contents=[
                 Part.from_bytes(
                     data=in_mem_file.getvalue(),
                     mime_type="image/png",
                 ),
-                "Detect every numbers, letters or signs in handwriting with each a unique entry. Output the JSON list positions where each entry contains the 2D bounding box in 'box_2d' and 'a text label' in 'label'."
+                # "Detect every numbers, letters or signs in handwriting with each a unique entry. Output the JSON list positions where each entry contains the 2D bounding box in 'box_2d' and 'a text label' in 'label'."
+                'Detect the position of number or syntax or sign where the error occurs in mathematical work. Output a json list where each error entry contains the 2D bounding box in "box_2d" and a text label in "label".'
+
             ],
             config=config,
         )
