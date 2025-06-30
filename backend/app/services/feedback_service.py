@@ -63,8 +63,8 @@ def get_feedback_from_image(gcs_uri: str, canonical_solution: str) -> list:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent?key={API_KEY}"
         headers = {"Content-Type": "application/json"}
         prompt_text = (
-            "Give the segmentation masks for the mathematical errors in this handwritten math solution image. "
-            "Output a JSON list of segmentation masks where each entry contains the 2D bounding box in 'box_2d', the segmentation mask in key 'mask', and the text label in the key 'label'. Use descriptive labels."
+            "Give the segmentation masks for the specific and unique mathematical errors in this handwritten math solution image. Sometimes the error happens in a chain, choose the exact momment of the chain that caused the error."
+            "Output a JSON list of segmentation masks where each entry contains the error's 2D bounding box in 'box_2d', segmentation mask in key 'mask', the text label in the key 'label'"
         )
         data = {
             "model": MODEL,
@@ -83,7 +83,7 @@ def get_feedback_from_image(gcs_uri: str, canonical_solution: str) -> list:
                 }
             ],
             "generationConfig": {
-                "temperature": 0
+                "temperature": 0.2
             }
         }
 
