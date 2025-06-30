@@ -27,7 +27,8 @@ def get_errorbouding_from_image(gcs_uri: str, canonical_solution: str = None) ->
         client = genai.Client(
             vertexai=True,
             project=settings.GCP_PROJECT_ID,
-            location=settings.AI_REGION,
+            # location=settings.AI_REGION,
+            location='global',
         )
 
         # Step 3: Build config for bounding box detection
@@ -37,7 +38,7 @@ def get_errorbouding_from_image(gcs_uri: str, canonical_solution: str = None) ->
             Never return masks. Limit to 10 objects.
             If an object is present multiple times, give each object a unique label according to its distinct characteristics (position, etc..).
             """,
-            temperature=0.5,
+            temperature=0.4,
             response_mime_type="application/json",
             response_schema=list[dict],
             thinking_config=ThinkingConfig(thinking_budget=512)
@@ -52,7 +53,7 @@ def get_errorbouding_from_image(gcs_uri: str, canonical_solution: str = None) ->
                     mime_type="image/png",
                 ),
                 # "Detect every numbers, letters or signs in handwriting with each a unique entry. Output the JSON list positions where each entry contains the 2D bounding box in 'box_2d' and 'a text label' in 'label'."
-                'Detect the position of number or syntax or sign where the error occurs in mathematical work. Output a json list where each error entry contains the 2D bounding box in "box_2d" and a text label in "label". ONLY REPLY IF ERROR DETECTED, ELSE LEAVE BLANK.'
+                'Detect the position of number or syntax or sign where the error (if any) occurs in mathematical work. Output a json list where each error entry contains the 2D bounding box in "box_2d" and a text label in "label". IF NO ERROR DETECTED, LEAVE BLANK.'
             ],
             config=config,
         )
