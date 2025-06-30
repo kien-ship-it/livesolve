@@ -1,37 +1,9 @@
-import json
 from typing import List, Dict, Any
-import io
-import base64
-
 from google.cloud import storage
-from PIL import Image
-
-import google.genai as genai
-from google.genai import types
-from google.genai import errors as genai_errors
-
 from app.core.config import settings
 from app.schemas.submission import ErrorEntry, AIFeedbackResponse
 
-# --- FOR TESTING: Use Gemini public API with personal API key ---
-import requests
-
-def get_feedback_from_image(gcs_uri: str, canonical_solution: str) -> dict:
-    """
-    Adapter: Calls detect_math_regions_from_image and returns its result. All other features are disabled for testing.
-    """
-    return detect_math_regions_from_image(gcs_uri)
-
-# ---
-# (Commented out: Vertex AI/SDK implementation)
-# def get_feedback_from_image(...):
-#     ...
-
-def generate_feedback_from_text(student_ocr_text: str, canonical_solution: str) -> str:
-    """(This function is now DEPRECATED in the main workflow)"""
-    return "This function is deprecated."
-
-def detect_math_regions_from_image(gcs_uri: str) -> dict:
+def get_feedback_from_image(gcs_uri: str, canonical_solution: str = None) -> dict:
     """
     Detects all math regions in the image and returns bounding boxes (normalized to 0-1000) with placeholder labels.
     Uses Vertex AI/GenAI SDK (google-genai) for bounding box detection.
@@ -81,7 +53,6 @@ def detect_math_regions_from_image(gcs_uri: str) -> dict:
                 ),
                 # "Detect every numbers, letters or signs in handwriting with each a unique entry. Output the JSON list positions where each entry contains the 2D bounding box in 'box_2d' and 'a text label' in 'label'."
                 'Detect the position of number or syntax or sign where the error occurs in mathematical work. Output a json list where each error entry contains the 2D bounding box in "box_2d" and a text label in "label".'
-
             ],
             config=config,
         )
@@ -109,7 +80,7 @@ def detect_math_regions_from_image(gcs_uri: str) -> dict:
             print(f"AIFeedbackResponse validation error: {e}")
             return AIFeedbackResponse(translated_handwriting="", errors=[]).model_dump()
     except Exception as e:
-        print(f"Error in detect_math_regions_from_image (Vertex AI): {type(e).__name__} - {e}")
+        print(f"Error in get_feedback_from_image (Vertex AI): {type(e).__name__} - {e}")
         import traceback
         traceback.print_exc()
         return AIFeedbackResponse(translated_handwriting="", errors=[]).model_dump()
