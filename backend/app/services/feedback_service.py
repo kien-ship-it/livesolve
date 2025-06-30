@@ -1,5 +1,3 @@
-# FILE: backend/app/services/feedback_service.py
-#
 import json
 from typing import List, Dict, Any
 import io
@@ -13,6 +11,7 @@ from google.genai import types
 from google.genai import errors as genai_errors
 
 from app.core.config import settings
+from app.schemas.submission import ErrorEntry, AIFeedbackResponse
 
 # --- FOR TESTING: Use Gemini public API with personal API key ---
 import requests
@@ -35,126 +34,80 @@ def generate_feedback_from_text(student_ocr_text: str, canonical_solution: str) 
 def detect_math_regions_from_image(gcs_uri: str) -> dict:
     """
     Detects all math regions in the image and returns bounding boxes (normalized to 0-1000) with placeholder labels.
+    Uses Vertex AI/GenAI SDK (google-genai) for bounding box detection.
     """
+    import google.genai as genai
+    from google.genai.types import GenerateContentConfig, HarmBlockThreshold, HarmCategory, HttpOptions, Part, SafetySetting, ThinkingConfig
+    import io
+
     try:
-        # --- Step 1 - Download and Prepare Image for Model ---
+        # Step 1: Download image from GCS URI to bytes
         storage_client = storage.Client(project=settings.GCP_PROJECT_ID)
         bucket_name = gcs_uri.split("/")[2]
         blob_name = "/".join(gcs_uri.split("/")[3:])
         bucket = storage_client.bucket(bucket_name)
         blob = bucket.blob(blob_name)
-
         in_mem_file = io.BytesIO()
         blob.download_to_file(in_mem_file)
         in_mem_file.seek(0)
 
-        with Image.open(in_mem_file) as img:
-            if img.mode != 'RGB':
-                img = img.convert('RGB')
-            # The model handles various sizes, but resizing can speed up the process.
-            # We don't need to save dimensions for scaling as the model returns normalized coords.
-            max_size = 640
-            scale = min(max_size / img.width, max_size / img.height)
-            new_width = int(img.width * scale)
-            new_height = int(img.height * scale)
-            resized_img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
-            output_buffer = io.BytesIO()
-            resized_img.save(output_buffer, format="PNG")
-            resized_image_bytes = output_buffer.getvalue()
-
-        image_b64 = base64.b64encode(resized_image_bytes).decode("utf-8")
-        if image_b64.startswith("data:image/png;base64,"):
-            image_b64 = image_b64[len("data:image/png;base64,"):]
-
-        # --- Step 2: Build API request for math region detection ---
-        API_KEY = "AIzaSyDideGDIfiPOlfpO-JhOaKr8GI-yxV14Vs"
-        MODEL = "models/gemini-2.5-flash"
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={API_KEY}"
-        headers = {"Content-Type": "application/json"}
-        # The reference implementation `bounding-box-pipeline.tsx` implies the model
-        # returns coordinates normalized to 1000 in [ymin, xmin, ymax, xmax] format.
-        prompt_text = (
-            "Detect all math, with no more than 20 items. Output a json list where each entry contains the 2D bounding box in 'box_2d' and 'label'."
+        # Step 2: Prepare GenAI SDK client
+        client = genai.Client(
+            vertexai=True,
+            project=settings.GCP_PROJECT_ID,
+            location='global',
         )
-        data = {
-            "model": MODEL,
-            "contents": [
-                {
-                    "role": "user",
-                    "parts": [
-                        {
-                            "inlineData": {
-                                "data": image_b64,
-                                "mimeType": "image/png"
-                            }
-                        },
-                        {"text": prompt_text}
-                    ]
-                }
+
+        # Step 3: Build config for bounding box detection
+        config = GenerateContentConfig(
+            system_instruction="""
+            Return bounding boxes as an array with labels.
+            Never return masks. Limit to 25 objects.
+            If an object is present multiple times, give each object a unique label according to its distinct characteristics (position, etc..).
+            """,
+            temperature=0.2,
+            response_mime_type="application/json",
+            response_schema=list[dict],
+            thinking_config=ThinkingConfig(thinking_budget=0)
+        )
+
+        # Step 4: Call the model
+        response = client.models.generate_content(
+            model="gemini-2.5-flash-lite-preview-06-17",
+            contents=[
+                Part.from_bytes(
+                    data=in_mem_file.getvalue(),
+                    mime_type="image/png",
+                ),
+                "Detect math handwriting, each syntax a unique item. Output the JSON list positions where each entry contains the 2D bounding box in 'box_2d' and 'a text label' in 'label'."
             ],
-            "generationConfig": {
-                "temperature": 0
-            }
-        }
+            config=config,
+        )
 
-        resp = requests.post(url, headers=headers, json=data)
+        # Step 5: Parse response and convert to expected schema
+        region_list = response.parsed if hasattr(response, "parsed") else []
+        errors = []
+        for region in region_list:
+            box_2d_from_model = region.get("box_2d", [])
+            label = region.get("label", "AI detected math region")
+            # Model returns [ymin, xmin, ymax, xmax], frontend expects [xmin, ymin, xmax, ymax]
+            if len(box_2d_from_model) == 4:
+                y1, x1, y2, x2 = box_2d_from_model
+                norm_box_2d = [x1, y1, x2, y2]
+            else:
+                norm_box_2d = [0, 0, 0, 0]
+            errors.append(ErrorEntry(error_text=label, box_2d=norm_box_2d))
         try:
-            resp.raise_for_status()
+            feedback = AIFeedbackResponse(
+                translated_handwriting="AI detected math regions",  # Placeholder
+                errors=errors
+            )
+            return feedback.model_dump()
         except Exception as e:
-            print(f"Public Gemini API error: {e}\n{resp.text}")
-            return {"translated_handwriting": "", "errors": []}
-        resp_json = resp.json()
-
-        # --- Step 3: Parse response for bounding boxes ---
-        try:
-            text = resp_json["candidates"][0]["content"]["parts"][0]["text"]
-            print(f"DEBUG: Raw API response text: {text[:500]}...")
-            import re
-            import json as pyjson
-            match = re.search(r'```json\s*(\[.*?\])\s*```', text, re.DOTALL)
-            if not match:
-                match = re.search(r'```json\s*(\[.*\])\s*```', text, re.DOTALL) # A slightly more lenient regex
-            if not match:
-                match = re.search(r'```\s*(\[.*?\])\s*```', text, re.DOTALL) # A more lenient regex
-            if not match:
-                print("DEBUG: Regex failed, printing full text for manual inspection:")
-                print(text)
-                print("No JSON list found in public API response.")
-                return {"translated_handwriting": "", "errors": []}
-            print(f"DEBUG: Regex matched: {match.group(0)[:200]}")
-            region_list = pyjson.loads(match.group(1))
-            print(f"DEBUG: Parsed region list: {region_list}")
-
-            errors = []
-            for region in region_list:
-                box_2d_from_model = region.get("box_2d", [])
-                
-                # --- FIX: Correctly handle coordinate format ---
-                # The model, as per the reference implementation, returns coordinates normalized
-                # to 1000 in the format [ymin, xmin, ymax, xmax].
-                # The frontend expects the format [xmin, ymin, xmax, ymax].
-                # We do not need to perform any scaling, just re-order the coordinates.
-                if len(box_2d_from_model) == 4:
-                    y1, x1, y2, x2 = box_2d_from_model
-                    # Swap to match frontend's expected format [x1, y1, x2, y2]
-                    norm_box_2d = [x1, y1, x2, y2]
-                else:
-                    norm_box_2d = [0, 0, 0, 0] # Default for malformed data
-                
-                errors.append({
-                    "error_text": "AI detected math region",  # Placeholder
-                    "box_2d": norm_box_2d
-                })
-
-            return {
-                "translated_handwriting": "AI detected math regions",  # Placeholder
-                "errors": errors
-            }
-        except Exception as e:
-            print(f"Failed to parse math region detection from public API response: {e}\n{resp_json}")
-            return {"translated_handwriting": "", "errors": []}
+            print(f"AIFeedbackResponse validation error: {e}")
+            return AIFeedbackResponse(translated_handwriting="", errors=[]).model_dump()
     except Exception as e:
-        print(f"Unexpected error in math region detection: {type(e).__name__} - {e}")
+        print(f"Error in detect_math_regions_from_image (Vertex AI): {type(e).__name__} - {e}")
         import traceback
         traceback.print_exc()
-        return {"translated_handwriting": "", "errors": []}
+        return AIFeedbackResponse(translated_handwriting="", errors=[]).model_dump()

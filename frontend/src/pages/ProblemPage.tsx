@@ -11,7 +11,7 @@ import FeedbackDisplay from '../components/problem/FeedbackDisplay';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
 import { ReactSketchCanvas, type ReactSketchCanvasRef, type CanvasPath } from 'react-sketch-canvas';
 import SubmissionModal from '../components/problem/SubmissionModal';
-
+// 
 // Types
 type SelectionMode = 'inactive' | 'selecting' | 'selected';
 interface Point { x: number; y: number; }
