@@ -48,7 +48,7 @@ def submit_solution_and_get_feedback(
     )
 
     try:
-        ai_feedback_data = feedback_service.get_feedback_from_image(
+        ai_feedback_data = feedback_service.get_errorbouding_from_image(
             gcs_uri=gcs_uri, canonical_solution=canonical_solution
         )
     except Exception as e:

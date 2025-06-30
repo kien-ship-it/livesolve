@@ -3,7 +3,7 @@ from google.cloud import storage
 from app.core.config import settings
 from app.schemas.submission import ErrorEntry, AIFeedbackResponse
 
-def get_feedback_from_image(gcs_uri: str, canonical_solution: str = None) -> dict:
+def get_errorbouding_from_image(gcs_uri: str, canonical_solution: str = None) -> dict:
     """
     Detects all math regions in the image and returns bounding boxes (normalized to 0-1000) with placeholder labels.
     Uses Vertex AI/GenAI SDK (google-genai) for bounding box detection.
@@ -52,7 +52,7 @@ def get_feedback_from_image(gcs_uri: str, canonical_solution: str = None) -> dic
                     mime_type="image/png",
                 ),
                 # "Detect every numbers, letters or signs in handwriting with each a unique entry. Output the JSON list positions where each entry contains the 2D bounding box in 'box_2d' and 'a text label' in 'label'."
-                'Detect the position of number or syntax or sign where the error occurs in mathematical work. Output a json list where each error entry contains the 2D bounding box in "box_2d" and a text label in "label".'
+                'Detect the position of number or syntax or sign where the error occurs in mathematical work. Output a json list where each error entry contains the 2D bounding box in "box_2d" and a text label in "label". ONLY REPLY IF ERROR DETECTED, ELSE LEAVE BLANK.'
             ],
             config=config,
         )

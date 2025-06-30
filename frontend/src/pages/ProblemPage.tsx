@@ -7,7 +7,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { submitSolution } from '../services/apiService';
 // --- UPDATED: Import new types for AI feedback with translation and error bounding boxes ---
 import type { SubmissionResult, ErrorEntry } from '../services/apiService';
-import FeedbackDisplay from '../components/problem/FeedbackDisplay';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
 import { ReactSketchCanvas, type ReactSketchCanvasRef, type CanvasPath } from 'react-sketch-canvas';
 import SubmissionModal from '../components/problem/SubmissionModal';
@@ -204,55 +203,58 @@ const ProblemPage: React.FC = () => {
           </div>
           <hr className="my-8" />
           
-          {submissionResult && (!submissionResult.ai_feedback_data?.errors || submissionResult.ai_feedback_data.errors.length === 0) && (
+          {/* Always show toolbox and canvas */}
+          <div className="mt-6">
+            <h2 className="text-xl font-semibold text-gray-700 mb-4">
+              {submissionResult ? "Here is your feedback:" : "Write Your Solution Below"}
+            </h2>
+            <div className="flex items-center space-x-2 mb-2 p-2 bg-gray-50 border border-gray-200 rounded-t-lg">
+              <button onClick={() => setActiveTool('pen')} className={getToolButtonStyles('pen')}>Pen</button>
+              <button onClick={() => setActiveTool('eraser')} className={getToolButtonStyles('eraser')}>Eraser</button>
+              <div className="border-l border-gray-300 h-6 mx-1"></div>
+              <button onClick={handleUndo} className="px-4 py-1.5 text-sm font-semibold rounded-md">Undo</button>
+              <button onClick={handleClear} className="px-4 py-1.5 text-sm font-semibold rounded-md">Clear</button>
+            </div>
+            <div ref={canvasContainerRef} className="relative w-full h-96">
+              <div className="absolute top-0 left-0 w-full h-full border-2 border-l-2 border-r-2 border-b-2 border-gray-200 rounded-b-lg overflow-hidden">
+                <ReactSketchCanvas ref={sketchCanvasRef} strokeWidth={4} strokeColor="black" eraserWidth={15} canvasColor="white" height="100%" width="100%" />
+              </div>
+              <canvas ref={overlayCanvasRef} className="absolute top-0 left-0 w-full h-full pointer-events-none" style={{ zIndex: 10 }} />
+              {selectionMode === 'selecting' && !isDrawingRect && ( <div className="absolute inset-0 flex items-center justify-center bg-gray-900/60 text-white font-bold text-xl pointer-events-none rounded-b-lg z-20">Click and drag to select an area</div>)}
+              {selectionMode !== 'inactive' && ( <div className="absolute top-0 left-0 w-full h-full cursor-crosshair z-20" onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp}>{selectionRect && (<div className="absolute border-2 border-solid border-blue-500 bg-blue-500/20 z-20" style={{ left: selectionRect.x, top: selectionRect.y, width: selectionRect.width, height: selectionRect.height }}/>)}</div>)}
+              {selectionMode === 'selected' && (<div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex space-x-2 z-30"><button onClick={handleConfirmSelection} className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-bold">Confirm Selection</button><button onClick={cancelSelection} className="bg-white text-gray-700 px-4 py-2 rounded-lg shadow-lg text-sm font-bold border">Cancel</button></div>)}
+            </div>
+            {submissionResult && (!submissionResult.ai_feedback_data || !submissionResult.ai_feedback_data.errors || submissionResult.ai_feedback_data.errors.length === 0) && (
             <>
-              <FeedbackDisplay result={submissionResult} />
+              <div className="mt-8 p-4 bg-green-100 border-l-4 border-green-500 text-green-700 rounded-md">
+                <p className="font-bold">Success</p>
+                <p>Your solution is correct! 🎉</p>
+              </div>
+            </>
+          )}
+            <div className="flex justify-center mt-6">
+              <button onClick={handleInitiateSubmit} disabled={isLoading || selectionMode !== 'inactive'} className="w-full max-w-xs bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400">
+                {isLoading ? 'Analyzing...' : 'Submit for Feedback'}
+              </button>
+            </div>
+          </div>
+
+          {/* Conditionally render feedback messages and buttons below the canvas/tools */}
+          {isLoading && <div className="mt-8 flex justify-center items-center space-x-3"><LoadingSpinner /><p className="text-lg text-gray-600">Analyzing...</p></div>}
+          {error && (
+            <div className="mt-8 p-4 bg-red-100 border-l-4 border-red-500 text-red-700 rounded-md">
+              <p className="font-bold">Error</p>
+              <p>{error}</p>
+            </div>
+          )}
+          {submissionResult && (!submissionResult.ai_feedback_data || !submissionResult.ai_feedback_data.errors || submissionResult.ai_feedback_data.errors.length === 0) && (
+            <>
               <div className="text-center mt-8">
                 <button onClick={() => { setSubmissionResult(null); handleClear(); setSentImageDimensions(null); }} className="bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">
                   Submit Another Solution
                 </button>
               </div>
             </>
-          )}
-
-          {(!submissionResult || (submissionResult && submissionResult.ai_feedback_data?.errors && submissionResult.ai_feedback_data.errors.length > 0)) && (
-            <div className="mt-6">
-              <h2 className="text-xl font-semibold text-gray-700 mb-4">
-                {submissionResult ? "Here is your feedback:" : "Write Your Solution Below"}
-              </h2>
-              <div className="flex items-center space-x-2 mb-2 p-2 bg-gray-50 border border-gray-200 rounded-t-lg">
-                <button onClick={() => setActiveTool('pen')} className={getToolButtonStyles('pen')}>Pen</button>
-                <button onClick={() => setActiveTool('eraser')} className={getToolButtonStyles('eraser')}>Eraser</button>
-                <div className="border-l border-gray-300 h-6 mx-1"></div>
-                <button onClick={handleUndo} className="px-4 py-1.5 text-sm font-semibold rounded-md">Undo</button>
-                <button onClick={handleClear} className="px-4 py-1.5 text-sm font-semibold rounded-md">Clear</button>
-              </div>
-              <div ref={canvasContainerRef} className="relative w-full h-96">
-                <div className="absolute top-0 left-0 w-full h-full border-2 border-l-2 border-r-2 border-b-2 border-gray-200 rounded-b-lg overflow-hidden">
-                  <ReactSketchCanvas ref={sketchCanvasRef} strokeWidth={4} strokeColor="black" eraserWidth={15} canvasColor="white" height="100%" width="100%" />
-                </div>
-                <canvas ref={overlayCanvasRef} className="absolute top-0 left-0 w-full h-full pointer-events-none" style={{ zIndex: 10 }} />
-                {selectionMode === 'selecting' && !isDrawingRect && ( <div className="absolute inset-0 flex items-center justify-center bg-gray-900/60 text-white font-bold text-xl pointer-events-none rounded-b-lg z-20">Click and drag to select an area</div>)}
-                {selectionMode !== 'inactive' && ( <div className="absolute top-0 left-0 w-full h-full cursor-crosshair z-20" onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp}>{selectionRect && (<div className="absolute border-2 border-solid border-blue-500 bg-blue-500/20 z-20" style={{ left: selectionRect.x, top: selectionRect.y, width: selectionRect.width, height: selectionRect.height }}/>)}</div>)}
-                {selectionMode === 'selected' && (<div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex space-x-2 z-30"><button onClick={handleConfirmSelection} className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-bold">Confirm Selection</button><button onClick={cancelSelection} className="bg-white text-gray-700 px-4 py-2 rounded-lg shadow-lg text-sm font-bold border">Cancel</button></div>)}
-              </div>
-              <div className="flex justify-center mt-6">
-                <button onClick={handleInitiateSubmit} disabled={isLoading || selectionMode !== 'inactive'} className="w-full max-w-xs bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400">
-                  {isLoading ? 'Analyzing...' : 'Submit for Feedback'}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {isLoading && <div className="mt-8 flex justify-center items-center space-x-3"><LoadingSpinner /><p className="text-lg text-gray-600">Analyzing...</p></div>}
-          {error && <div className="mt-8 p-4 bg-red-100 border-l-4 border-red-500 text-red-700 rounded-md"><p className="font-bold">Error</p><p>{error}</p></div>}
-
-          {submissionResult && submissionResult.ai_feedback_data?.errors && submissionResult.ai_feedback_data.errors.length > 0 && (
-              <div className="text-center mt-8">
-                <button onClick={() => { setSubmissionResult(null); handleClear(); setSentImageDimensions(null); }} className="bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">
-                  Try Again
-                </button>
-              </div>
           )}
 
         </div>
