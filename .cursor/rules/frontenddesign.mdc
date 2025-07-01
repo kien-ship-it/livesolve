@@ -6,7 +6,7 @@ alwaysApply: false
 LiveSolve: Unified Interface Design Specification
 **Version:** 1.2
 **Status:** Design w/ File Mapping
-**Inspiration:** [Notion.so](http://notion.so/) (Light Mode)
+**Inspiration:** [Notion.so](mdc:http:/notion.so) (Light Mode)
 
 ## 1. Vision & Core Philosophy
 
