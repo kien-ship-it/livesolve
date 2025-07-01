@@ -1,0 +1,145 @@
+---
+description: Refer to this rule when designing new Frontend Main Canvas Page interface.
+globs: 
+alwaysApply: false
+---
+LiveSolve: Unified Interface Design Specification
+**Version:** 1.2
+**Status:** Design w/ File Mapping
+**Inspiration:** [Notion.so](http://notion.so/) (Light Mode)
+
+## 1. Vision & Core Philosophy
+
+This document outlines the design for the new "Unified Interface" of the LiveSolve application. The goal is to evolve from the simple MVP layout to a modern, fluid, and highly-functional three-column workspace, heavily inspired by the minimalist and powerful design of Notion.
+
+**Core Principles:**
+
+- **Three-Column Layout:** A clear separation between navigation, the primary workspace, and the contextual AI assistant.
+- **Minimalist & Clean:** A light-mode-first aesthetic with clean lines, generous use of space, and intuitive iconography.
+- **Context-Aware:** The interface should feel intelligent, with tools and information appearing when and where the user needs them.
+- **Fluid & Responsive:** Components should smoothly transition, and sidebars should be collapsible to maximize the user's focus on their work.
+
+---
+
+## 2. Layout Breakdown
+
+The interface is divided into three primary vertical columns, assembled by **`src/components/layout/AppLayout.tsx`**, which is rendered by **`src/pages/WorkspacePage.tsx`**.
+
+### **2.1. The Left Sidebar (Navigation & Workspace)**
+
+- **Container Component:** `src/components/layout/LeftSidebar.tsx`
+- **Component: User Profile Dropdown**
+    - **Description:** Located at the very top. Displays the user's name. Clicking it opens a standard, rounded-corner dropdown menu with options like "User Settings" and "Log out."
+    - **Component File:** `src/components/sidebar/UserProfile.tsx`
+- **Component: Core Navigation Tabs**
+    - **Description:** A set of static, full-width buttons directly below the user profile for `Home` and `Analytics`.
+    - **Component File:** `src/components/sidebar/Navigation.tsx`
+- **Component: Workspace Section**
+    - **Description:** A dedicated "Private" or "Workspace" area that contains the hierarchy of problem sets, represented as expandable/collapsible dropdowns.
+    - **Component File:** `src/components/sidebar/WorkspaceList.tsx`
+- **Component: Bottom Utility Icons**
+    - **Description:** Three icon-only buttons docked at the bottom of the sidebar for `Trash`, `Settings`, and `Help`.
+    - **Component File:** `src/components/sidebar/UtilityBar.tsx`
+
+### **2.2. The Center Column (The Canvas Workspace)**
+
+- **Container Component:** `src/components/layout/CenterColumn.tsx`
+- **Component: Top Bar (Tab Management)**
+    - **Description:** A browser-like tab bar at the very top for managing multiple open problems with forward/back arrows and a '+' button.
+    - **Component File:** `src/components/workspace/ProblemTabsBar.tsx`
+- **Component: Problem Header**
+    - **Description:** The title area for the currently active problem, including the `Problem Title`, `Star Icon`, and `Three-Dots Menu`.
+    - **Component File:** `src/components/workspace/ProblemHeader.tsx`
+- **Component: Problem Statement**
+    - **Description:** The area directly below the header that displays the problem itself (text or image). This is static and not part of the canvas.
+    - **Component File:** This will likely be rendered within `src/components/layout/CenterColumn.tsx` or a new, simple component like `src/components/workspace/ProblemStatement.tsx`.
+- **Component: Floating Drawing Toolbar**
+    - **Description:** A vertical, pill-shaped container with icon-only buttons for **Pen**, **Eraser**, **Undo**, and **Clear**.
+    - **Component File:** `src/components/workspace/DrawingToolbar.tsx`
+- **Component: The Canvas**
+    - **Description:** The free-form digital canvas for the user to write their solution.
+    - **Component File:** `src/components/workspace/DrawingCanvas.tsx`
+
+### **2.3. The Right Sidebar (AI & Conversational Learning)**
+
+- **Container Component:** `src/components/layout/RightAIColumn.tsx`
+- **Component: The AI Button (Collapsed State)**
+    - **Description:** A circular button (Floating Action Button) docked at the bottom-right corner.
+    - **Component File:** `src/components/ai/AIFloatingButton.tsx`
+- **Component: The AI Chat Panel (Expanded State)**
+    - **Description:** The panel that slides in from the right when the AI button is clicked. It contains `Action Buttons`, `Chat History`, and `Chat Input`.
+    - **Component File:** `src/components/ai/AIChatPanel.tsx`
+
+---
+
+## 3. Component Shape & Styling Language
+
+To achieve the Notion-like aesthetic, the following CSS properties and principles will be key, likely leveraging components from the `src/components/ui/` directory (`Button.tsx`, `Dropdown.tsx`, `Icon.tsx`, etc.).
+
+- **Subtle Rounded Corners (`border-radius`):** Apply a small border-radius (e.g., 3px to 6px) to major containers, dropdowns, buttons, and input fields to soften the look.
+- **Minimalist Icons:** Utilize a clean, consistent icon library (e.g., Heroicons, Lucide) for all interactive elements, managed via `src/components/ui/Icon.tsx`.
+- **Low-Profile Floating Elements (`box-shadow`):** Use a subtle, diffused `box-shadow` for floating elements like the drawing toolbar and expanded AI chat panel to create a sense of depth without being distracting.
+- **Clear Hover/Focus States:** All interactive elements must have clear visual feedback on hover (e.g., slight background color change) and focus (e.g., a soft ring/outline).
+- **Light Mode Palette:** A primary background of white or a very light off-white (e.g., `#FFFFFF` or `#F7F7F7`). Text will be a high-contrast dark grey or black (e.g., `#191919`). Sidebars and panels may use a slightly different shade of light grey to create subtle separation.
+
+---
+
+frontend/src/
+│
+├── assets/                  # Static assets like logos, images
+│
+├── components/              # The heart of our UI, organized by feature
+│   │
+│   ├── ai/                  # Components for the AI/Chat column
+│   │   ├── AIFloatingButton.tsx
+│   │   └── AIChatPanel.tsx
+│   │
+│   ├── layout/              # The main structural components
+│   │   ├── AppLayout.tsx      # Assembles the 3 columns
+│   │   ├── LeftSidebar.tsx
+│   │   ├── CenterColumn.tsx
+│   │   └── RightAIColumn.tsx
+│   │
+│   ├── sidebar/             # Components specific to the Left Sidebar
+│   │   ├── UserProfile.tsx
+│   │   ├── Navigation.tsx
+│   │   ├── WorkspaceList.tsx
+│   │   └── UtilityBar.tsx
+│   │
+│   ├── ui/                  # Small, reusable, "dumb" UI elements (our Lego bricks)
+│   │   ├── Button.tsx
+│   │   ├── Dropdown.tsx
+│   │   ├── Icon.tsx
+│   │   ├── Modal.tsx
+│   │   └── Input.tsx
+│   │
+│   └── workspace/           # Components for the Center (Canvas) Column
+│       ├── ProblemTabsBar.tsx
+│       ├── ProblemHeader.tsx
+│       ├── DrawingCanvas.tsx
+│       └── DrawingToolbar.tsx
+│
+├── contexts/                # Global state management
+│   ├── AuthContext.tsx      # (Existing)
+│   ├── CanvasContext.tsx    # (New) For managing canvas state
+│   └── ChatContext.tsx      # (New) For managing AI chat state
+│
+├── hooks/                   # Reusable custom React hooks
+│   ├── useAuth.ts           # (Existing)
+│   └── useCanvas.ts         # (New)
+│
+├── pages/                   # Top-level components for each route
+│   ├── LoginPage.tsx        # (Existing, may need style updates)
+│   ├── WorkspacePage.tsx    # The new main page that renders AppLayout
+│   ├── SettingsPage.tsx
+│   ├── AnalyticsPage.tsx
+│   └── NotFoundPage.tsx
+│
+├── services/                # API communication layer
+│   └── apiService.ts        # (Existing, will be updated for new endpoints)
+│
+├── styles/                  # Global styles
+│   └── global.css
+│
+└── types/                   # TypeScript type definitions
+└── index.
