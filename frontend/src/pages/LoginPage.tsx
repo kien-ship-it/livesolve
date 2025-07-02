@@ -9,6 +9,7 @@ import {
 import type { UserCredential } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
+import visualization from '../assets/Hands Reaching for Object.jpg';
 
 export default function LoginPage() {
   const [isLoginView, setIsLoginView] = useState(true);
@@ -55,8 +56,8 @@ export default function LoginPage() {
       {/* Left side - Image */}
       <div className="hidden md:flex md:w-1/2 relative overflow-hidden">
         <img 
-          src="/src/assets/Hands Reaching for Object.jpg" 
-          alt="Collaborative workspace" 
+          src={visualization}
+          alt="Collaborative workspace"  
           className="absolute inset-0 w-full h-full object-cover"
         />
         {/* Overlay gradient */}
