@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Icon from '../ui/Icon';
-import type { ReactSketchCanvasRef } from 'react-sketch-canvas';
+import type { DrawingCanvasRef } from './DrawingCanvas';
 
 interface DrawingToolbarProps {
-  canvasRef: React.RefObject<ReactSketchCanvasRef | null>;
+  canvasRef: React.RefObject<DrawingCanvasRef | null>;
   strokeWidth: number;
   strokeColor: string;
   eraserWidth: number;
@@ -45,12 +45,7 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
 }) => {
   const [pressed, setPressed] = useState<{ [key: string]: boolean }>({});
 
-  // Update canvas when tool changes
-  useEffect(() => {
-    if (canvasRef.current) {
-      canvasRef.current.eraseMode(activeTool === 'eraser');
-    }
-  }, [activeTool, canvasRef]);
+
 
   const handleActionClick = (toolName: string) => {
     setPressed((prev) => ({ ...prev, [toolName]: true }));

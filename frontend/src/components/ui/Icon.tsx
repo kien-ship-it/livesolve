@@ -20,9 +20,9 @@ export const Icon: React.FC<IconProps> = ({
   className = '',
   ...props
 }) => {
-  const LucideIcon = LucideIcons[iconName];
+  const LucideIcon = LucideIcons[iconName] as React.ComponentType<React.SVGProps<SVGSVGElement>>;
   if (!LucideIcon) return null;
-  return <LucideIcon size={size} color={color} className={className} {...props} />;
+  return <LucideIcon width={size} height={size} color={color} className={className} {...props} />;
 };
 
 export default Icon;

@@ -6,7 +6,7 @@ import CenterColumn from './CenterColumn';
 import DrawingToolbar from '../workspace/DrawingToolbar';
 import AIFloatingButton from '../ai/AIFloatingButton';
 import AIChatPanel from '../ai/AIChatPanel';
-import type { DrawingCanvasRef } from '../workspace/DrawingCanvas';
+import type { DrawingCanvasRef, BoundingBox } from '../workspace/DrawingCanvas';
 
 const AppLayout: React.FC = () => {
   const [aiOpen, setAiOpen] = useState(false);
@@ -14,22 +14,47 @@ const AppLayout: React.FC = () => {
   const [strokeColor, setStrokeColor] = useState('#000000');
   const [eraserWidth, setEraserWidth] = useState(8);
   const [activeTool, setActiveTool] = useState<'pen' | 'eraser'>('pen');
-  const canvasRef = useRef<DrawingCanvasRef>(null);
+  const canvasRef = useRef<DrawingCanvasRef | null>(null);
   const [aiFeedbackBoxes, setAiFeedbackBoxes] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
 
+  // State for interactive selection
+  const [isSelectionModeActive, setIsSelectionModeActive] = useState(false);
+  const [selectionBounds, setSelectionBounds] = useState<BoundingBox | null>(null);
+
   const { currentUser } = useAuth();
 
-  const handleCaptureAllWork = async () => {
-    if (!canvasRef.current || isSubmitting) return;
+  const handleCaptureAllWork = () => {
+    if (!canvasRef.current) return;
+    // This will trigger the DrawingCanvas to calculate the initial bounds
+    // and call onBoundsCalculate, which will then set the selectionBounds.
+    setIsSelectionModeActive(true);
+  };
+
+  const handleBoundsCalculate = (bounds: BoundingBox | null) => {
+    if (bounds) {
+      setSelectionBounds(bounds);
+    } else {
+      setIsSelectionModeActive(false);
+      alert('No content on the canvas to select.');
+    }
+  };
+
+  const handleSelectionChange = (bounds: BoundingBox) => {
+    setSelectionBounds(bounds);
+  };
+
+  const handleConfirmSelection = async () => {
+    if (!canvasRef.current || !selectionBounds || isSubmitting) return;
 
     setIsSubmitting(true);
     setSubmissionError(null);
     setAiFeedbackBoxes([]);
+    setIsSelectionModeActive(false);
 
     try {
-      const result = await canvasRef.current.exportStrokes();
+      const result = await canvasRef.current.exportStrokes(selectionBounds);
       if (!result) {
         throw new Error('Could not export strokes. Is the canvas empty?');
       }
@@ -48,13 +73,11 @@ const AppLayout: React.FC = () => {
           const [x1, y1, x2, y2] = error.box_2d;
           const { x, y, width, height } = result.bounds;
 
-          // Scale the normalized coordinates to the exported image's dimensions
           const imgX1 = (x1 / 1000) * width;
           const imgY1 = (y1 / 1000) * height;
           const imgX2 = (x2 / 1000) * width;
           const imgY2 = (y2 / 1000) * height;
 
-          // Translate the coordinates back to the canvas space
           return {
             ...error,
             box_2d: [
@@ -75,6 +98,7 @@ const AppLayout: React.FC = () => {
       alert(`Error: ${error.message || 'An unexpected error occurred.'}`);
     } finally {
       setIsSubmitting(false);
+      setSelectionBounds(null);
     }
   };
 
@@ -86,13 +110,17 @@ const AppLayout: React.FC = () => {
       </div>
       {/* Main content area extending to left edge to cover gaps */}
       <div className="flex-1 flex min-w-0 transition-all duration-300 ml-0 bg-white">
-        <CenterColumn 
+        <CenterColumn
           strokeWidth={strokeWidth}
           strokeColor={strokeColor}
           eraserWidth={eraserWidth}
           canvasRef={canvasRef}
-          activeTool={activeTool}
           aiFeedbackBoxes={aiFeedbackBoxes}
+          isSelectionModeActive={isSelectionModeActive}
+          selectionBounds={selectionBounds}
+          onSelectionChange={handleSelectionChange}
+          onConfirmSelection={handleConfirmSelection}
+          onBoundsCalculate={handleBoundsCalculate}
         />
       </div>
       {/* Fixed drawing toolbar */}
