@@ -203,9 +203,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(
       calculateAndReportBounds: () => {
         internalCanvasRef.current?.exportPaths()
           .then((paths: CanvasPath[]) => {
-            // Filter out erased paths using the `drawMode` property
-            const visiblePaths = paths.filter((path) => path.drawMode === true);
-            onBoundsCalculate(calculateBoundingBox(visiblePaths));
+            onBoundsCalculate(calculateBoundingBox(paths));
           })
           .catch(e => console.error('Error exporting paths:', e));
       },

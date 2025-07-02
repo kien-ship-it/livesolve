@@ -38,7 +38,7 @@ def get_errorbouding_from_image(gcs_uri: str, canonical_solution: str = None) ->
             Never return masks. Limit to 10 objects.
             If an object is present multiple times, give each object a unique label according to its distinct characteristics (position, etc..).
             """,
-            temperature=0.4,
+            temperature=0.7,
             response_mime_type="application/json",
             response_schema=list[dict],
             thinking_config=ThinkingConfig(thinking_budget=512)
@@ -53,7 +53,38 @@ def get_errorbouding_from_image(gcs_uri: str, canonical_solution: str = None) ->
                     mime_type="image/png",
                 ),
                 # "Detect every numbers, letters or signs in handwriting with each a unique entry. Output the JSON list positions where each entry contains the 2D bounding box in 'box_2d' and 'a text label' in 'label'."
-                'Detect the position of number or syntax or sign where the error (if any) occurs in mathematical work. Output a json list where each error entry contains the 2D bounding box in "box_2d" and a text label in "label". IF NO ERROR DETECTED, LEAVE BLANK.'
+                # 'Detect the position of number or syntax or sign where the error (if any) occurs in mathematical work. Output a json list where each error entry contains the 2D bounding box in "box_2d" and a text label in "label". IF NO ERROR DETECTED, LEAVE BLANK.'
+                """
+                ## Persona
+                You are a highly precise, automated system for mathematical error detection. You function as a quality control checker for educational software. Your analysis must be objective, accurate, and strictly formatted.
+                ## Primary Objective
+                Given an image containing mathematical steps, identify every logical, calculation, or transcription error. For each error, you must return its precise location and a structured description.
+                ## Input
+                An image file containing handwritten or typed mathematical work.
+                ## Output Specification
+                Your entire output must be a single, valid JSON object that is a list of error entries.
+                No Errors: If the mathematical work is entirely correct, you must return an empty list []. Do not add any other text or explanation.
+                With Errors: If errors are present, return a list of JSON objects. Each object represents a single, distinct error and must contain the following two keys:
+                "box_2d": A JSON array of four integer pixel coordinates [x_min, y_min, x_max, y_max], defining the tightest possible bounding box around the incorrect character, number, or sign.
+                "label": A JSON string with a structured description of the error, formatted as "Error Type: Brief, specific explanation."
+                ## Core Instructions & Error Taxonomy
+                You must classify errors into one of the following types:
+                Calculation Error: For mistakes in basic arithmetic (e.g., 7 * 8 = 54).
+                Label Example: `"Calculation Error: The result of 7 * 8 should be 56."*
+                Sign Error: For errors involving positive/negative signs (e.g., -3^2 = 9).
+                Label Example: `"Sign Error: (-3)^2 is 9, but -3^2 is -9. Check order of operations."*
+                Conceptual Error: For incorrect application of a mathematical law or property (e.g., sqrt(a^2 + b^2) = a + b).
+                Label Example: `"Conceptual Error: The square root of a sum is not the sum of the square roots."*
+                Transcription Error: For when a value is copied incorrectly from one line to the next.
+                Label Example: `"Transcription Error: The value was 5 on the previous line but was written as 6 here."*
+                Syntax Error: For malformed mathematical expressions (e.g., (2+x with a missing closing parenthesis).
+                Label Example: `"Syntax Error: Missing closing parenthesis ')'."*
+                ## Constraints and Edge Cases
+                Focus only on mathematical correctness. Do not comment on handwriting neatness or style.
+                If a step is technically correct but uses an unconventional method, it is not an error.
+                If a section of the image is completely illegible or not mathematical, ignore it and do not flag an error.
+                The bounding box should be as tight as possible around the specific point of error. For example, in 2+2=5, the box should be around the 5, not the whole equation.
+                """
             ],
             config=config,
         )

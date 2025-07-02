@@ -40,7 +40,7 @@ const AppLayout: React.FC = () => {
       setSelectionBounds(bounds);
     } else {
       setIsSelectionModeActive(false);
-      alert('No content on the canvas to select.');
+
     }
   };
 
