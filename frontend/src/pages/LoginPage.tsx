@@ -77,10 +77,10 @@ export default function LoginPage() {
             opacity: 0.5,
           }}></div>
           
-          {/* Top-left gradient accent - Enhanced */}
+          {/* Top-left gradient accent */}
           <div className="absolute -top-64 -left-64 w-[800px] h-[800px] bg-gradient-to-br from-blue-200 via-blue-100 to-transparent rounded-full filter blur-[100px] opacity-80"></div>
           
-          {/* Bottom-right gradient accent - Enhanced */}
+          {/* Bottom-right gradient accent */}
           <div className="absolute -bottom-64 -right-64 w-[800px] h-[800px] bg-gradient-to-tr from-indigo-200 via-indigo-100 to-transparent rounded-full filter blur-[100px] opacity-80"></div>
           
           {/* Top curved line */}

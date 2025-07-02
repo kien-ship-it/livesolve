@@ -6,7 +6,7 @@ import type { MouseEvent } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { submitSolution } from '../services/apiService';
 // --- UPDATED: Import new types for AI feedback with translation and error bounding boxes ---
-import type { SubmissionResult, ErrorEntry } from '../services/apiService';
+import type { SubmissionResult } from '../services/apiService';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
 import { ReactSketchCanvas, type ReactSketchCanvasRef, type CanvasPath } from 'react-sketch-canvas';
 import SubmissionModal from '../components/problem/SubmissionModal';
