@@ -18,6 +18,8 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({ onClose }) => {
   const [exiting, setExiting] = useState(false);
   const [activeTab, setActiveTab] = useState('Feedback');
   const [input, setInput] = useState('');
+  const [feedbackPopupOpen, setFeedbackPopupOpen] = useState(false);
+  const feedbackTabRef = React.useRef<HTMLButtonElement>(null);
 
   const handleRefresh = () => {
     // Add refresh logic here if needed
@@ -27,11 +29,40 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({ onClose }) => {
     setShow(true);
   }, []);
 
+  // Close popup when clicking outside
+  useEffect(() => {
+    if (!feedbackPopupOpen) return;
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        feedbackTabRef.current &&
+        !feedbackTabRef.current.contains(event.target as Node)
+      ) {
+        setFeedbackPopupOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [feedbackPopupOpen]);
+
   const handleClose = () => {
     setExiting(true);
     setTimeout(() => {
       onClose();
     }, ANIMATION_DURATION);
+  };
+
+  const handleFeedbackTabClick = () => {
+    setActiveTab('Feedback');
+    setFeedbackPopupOpen((open) => !open);
+  };
+
+  const handleSelectAllWork = () => {
+    setFeedbackPopupOpen(false);
+    // TODO: Implement select all work logic
+  };
+  const handleSelectArea = () => {
+    setFeedbackPopupOpen(false);
+    // TODO: Implement select area logic
   };
 
   return (
@@ -67,16 +98,38 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({ onClose }) => {
         {/* Tabs below welcome message */}
         <div className="flex flex-row justify-center items-center gap-2 mb-2">
           {tabs.map((tab) => (
-            <button
-              key={tab.name}
-              className={`flex flex-col items-center px-3 py-2 rounded-lg transition text-xs font-medium
-                ${activeTab === tab.name ? 'bg-neutral-100 text-black' : 'text-neutral-500 hover:bg-neutral-50'}`}
-              onClick={() => setActiveTab(tab.name)}
-              type="button"
-            >
-              <Icon iconName={tab.icon as any} size={18} />
-              <span className="mt-1">{tab.label}</span>
-            </button>
+            <div key={tab.name} className="relative">
+              <button
+                ref={tab.name === 'Feedback' ? feedbackTabRef : undefined}
+                className={`flex flex-col items-center px-3 py-2 rounded-lg transition text-xs font-medium
+                  ${activeTab === tab.name ? 'bg-neutral-100 text-black' : 'text-neutral-500 hover:bg-neutral-50'}`}
+                onClick={tab.name === 'Feedback' ? handleFeedbackTabClick : () => setActiveTab(tab.name)}
+                type="button"
+              >
+                <Icon iconName={tab.icon as any} size={18} />
+                <span className="mt-1">{tab.label}</span>
+              </button>
+              {/* Popup for Feedback tab */}
+              {tab.name === 'Feedback' && feedbackPopupOpen && (
+                <div
+                  className="absolute left-1/2 top-full z-20 mt-2 w-40 bg-white border border-neutral-200 rounded-lg shadow-lg flex flex-col animate-fade-in"
+                  style={{ transform: 'translateX(-50%)' }}
+                >
+                  <button
+                    className="px-4 py-2 text-left hover:bg-neutral-100 rounded-t-lg focus:outline-none"
+                    onClick={handleSelectAllWork}
+                  >
+                    Select all work
+                  </button>
+                  <button
+                    className="px-4 py-2 text-left hover:bg-neutral-100 rounded-b-lg focus:outline-none"
+                    onClick={handleSelectArea}
+                  >
+                    Select area
+                  </button>
+                </div>
+              )}
+            </div>
           ))}
         </div>
       </div>

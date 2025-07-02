@@ -1,0 +1,7 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+<!-- Please refer to [canvasdevplan.mdc](mdc:.cursor/rules/canvasdevplan.mdc) for overall development guidelines -->
+For react_sketch_canvas library documentation, refer to [React_sketch_canvas.md](mdc:React_sketch_canvas.md)
