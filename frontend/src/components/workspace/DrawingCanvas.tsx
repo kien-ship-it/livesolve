@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, forwardRef, useImperativeHandle, type PointerEvent as ReactPointerEvent } from 'react';
+import { useState, useRef, useCallback, forwardRef, useImperativeHandle, type PointerEvent as ReactPointerEvent, useEffect } from 'react';
 import { ReactSketchCanvas, type ReactSketchCanvasRef, type CanvasPath } from 'react-sketch-canvas';
 
 // --- TYPES ---
@@ -15,6 +15,7 @@ export interface DrawingCanvasRef {
   undo: () => void;
   redo: () => void;
   loadPaths: (paths: CanvasPath[]) => void;
+  calculateAndReportBounds: () => void;
 }
 
 export interface DrawingCanvasProps {
@@ -22,12 +23,16 @@ export interface DrawingCanvasProps {
   strokeWidth: number;
   eraserWidth: number;
   aiFeedbackBoxes?: any[];
+  showAiFeedbackBoxes: boolean;
   onPathsChange?: (paths: CanvasPath[]) => void;
   isSelectionModeActive: boolean;
   selectionBounds: BoundingBox | null;
   onSelectionChange: (bounds: BoundingBox) => void;
   onConfirmSelection: () => void;
+  onCancelSelection: () => void;
   onBoundsCalculate: (bounds: BoundingBox | null) => void;
+  isSubmitting: boolean;
+  activeTool: 'pen' | 'eraser';
 }
 
 
@@ -41,18 +46,49 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(
       strokeWidth,
       eraserWidth,
       aiFeedbackBoxes = [],
+      showAiFeedbackBoxes,
       onPathsChange,
       isSelectionModeActive,
       selectionBounds,
       onSelectionChange,
       onConfirmSelection,
+      onCancelSelection,
       onBoundsCalculate,
+      isSubmitting,
+      activeTool,
     },
     ref
   ) => {
     const [size, setSize] = useState({ width: 1300, height: 1000 });
     const internalCanvasRef = useRef<ReactSketchCanvasRef>(null);
     const wrapperRef = useRef<HTMLDivElement>(null);
+
+    const [cursorPosition, setCursorPosition] = useState<{ x: number; y: number } | null>(null);
+    const [isCursorVisible, setIsCursorVisible] = useState(false);
+
+    const handlePointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+      if (wrapperRef.current) {
+        const rect = wrapperRef.current.getBoundingClientRect();
+        setCursorPosition({
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top,
+        });
+      }
+    };
+
+    const handlePointerEnter = () => {
+      setIsCursorVisible(true);
+    };
+
+    const handlePointerLeave = () => {
+      setIsCursorVisible(false);
+    };
+
+    useEffect(() => {
+      if (internalCanvasRef.current) {
+        internalCanvasRef.current.eraseMode(activeTool === 'eraser');
+      }
+    }, [activeTool]);
 
     const calculateBoundingBox = useCallback((paths: CanvasPath[]): BoundingBox | null => {
       if (!paths.length) return null;
@@ -164,6 +200,13 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(
       undo: () => internalCanvasRef.current?.undo(),
       redo: () => internalCanvasRef.current?.redo(),
       loadPaths: (paths) => internalCanvasRef.current?.loadPaths(paths),
+      calculateAndReportBounds: () => {
+        internalCanvasRef.current?.exportPaths()
+          .then((paths: CanvasPath[]) => {
+            onBoundsCalculate(calculateBoundingBox(paths));
+          })
+          .catch(e => console.error('Error exporting paths:', e));
+      },
     }));
 
     const handleDragPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -215,7 +258,49 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(
     };
 
     return (
-      <div className="w-full h-full bg-white relative overflow-hidden" ref={wrapperRef}>
+      <div
+        className="w-full h-full bg-white relative overflow-hidden"
+        ref={wrapperRef}
+        onPointerEnter={handlePointerEnter}
+        onPointerLeave={handlePointerLeave}
+        onPointerMove={handlePointerMove}
+
+      >
+        {isCursorVisible && cursorPosition && (() => {
+          const cursorSize = activeTool === 'pen' ? strokeWidth : eraserWidth;
+          
+          const hexToRgba = (hex: string, alpha = 1) => {
+            if (!/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)) return `rgba(0,0,0,${alpha})`;
+            let c = hex.substring(1).split('');
+            if (c.length === 3) {
+              c = [c[0], c[0], c[1], c[1], c[2], c[2]];
+            }
+            const cInt = parseInt('0x' + c.join(''));
+            return `rgba(${[(cInt >> 16) & 255, (cInt >> 8) & 255, cInt & 255].join(',')},${alpha})`;
+          };
+
+          const cursorBackgroundColor = activeTool === 'pen' 
+            ? hexToRgba(strokeColor, 0.5) 
+            : 'rgba(255, 255, 255, 0.7)';
+            
+          return (
+            <div
+              style={{
+                position: 'absolute',
+                left: `${cursorPosition.x}px`,
+                top: `${cursorPosition.y}px`,
+                width: cursorSize,
+                height: cursorSize,
+                backgroundColor: cursorBackgroundColor,
+                border: '1px solid black',
+                borderRadius: '50%',
+                transform: 'translate(-50%, -50%)',
+                pointerEvents: 'none',
+                zIndex: 1000,
+              }}
+            />
+          );
+        })()}
         <div style={{ width: `${size.width}px`, height: `${size.height}px`, position: 'relative' }}>
           <ReactSketchCanvas
             ref={internalCanvasRef}
@@ -229,22 +314,32 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(
           />
           {isSelectionModeActive && selectionBounds && (
             <div 
-              style={{ position: 'absolute', left: selectionBounds.x, top: selectionBounds.y, width: selectionBounds.width, height: selectionBounds.height, cursor: 'move' }}
-              onPointerDown={handleDragPointerDown}
+              style={{ position: 'absolute', left: selectionBounds.x, top: selectionBounds.y, width: selectionBounds.width, height: selectionBounds.height, cursor: isSubmitting ? 'default' : 'move' }}
+              onPointerDown={isSubmitting ? undefined : handleDragPointerDown}
             >
-              <div className="w-full h-full bg-blue-500/20 border-2 border-blue-600 pointer-events-none" />
-              {renderResizeHandles()}
-              <button
-                onClick={onConfirmSelection}
-                className="absolute -bottom-12 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-bold hover:bg-blue-700 transition-colors z-20"
-              >
-                Confirm
-              </button>
+              <div className={`w-full h-full bg-blue-500/20 rounded border-2 border-blue-600 pointer-events-none ${isSubmitting ? 'animate-breathing' : ''}`} />
+              {!isSubmitting && renderResizeHandles()}
+              {!isSubmitting && (
+                <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 flex space-x-2">
+                  <button
+                    onClick={onConfirmSelection}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-bold hover:bg-blue-700 transition-colors z-20"
+                  >
+                    Confirm
+                  </button>
+                  <button
+                    onClick={onCancelSelection}
+                    className="bg-white text-gray-800 px-4 py-2 rounded-lg border-gray-200 border shadow-sm text-sm font-bold hover:bg-gray-200 transition-colors z-20"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
             </div>
           )}
-          {aiFeedbackBoxes.map((box, index) => {
+          {showAiFeedbackBoxes && aiFeedbackBoxes.map((box, index) => {
             const [x1, y1, x2, y2] = box.box_2d;
-            return <div key={index} style={{ position: 'absolute', left: x1, top: y1, width: x2 - x1, height: y2 - y1, border: '2px solid red', pointerEvents: 'none', zIndex: 11 }} />;
+            return <div key={index} className="absolute bg-red-500/30 border-2 border-red-600 rounded-lg pointer-events-none z-10" style={{ left: x1, top: y1, width: x2 - x1, height: y2 - y1 }} />;
           })}
         </div>
       </div>

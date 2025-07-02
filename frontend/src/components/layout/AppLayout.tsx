@@ -22,14 +22,17 @@ const AppLayout: React.FC = () => {
   // State for interactive selection
   const [isSelectionModeActive, setIsSelectionModeActive] = useState(false);
   const [selectionBounds, setSelectionBounds] = useState<BoundingBox | null>(null);
+  const [showAiFeedbackBoxes, setShowAiFeedbackBoxes] = useState(true);
 
   const { currentUser } = useAuth();
 
   const handleCaptureAllWork = () => {
     if (!canvasRef.current) return;
-    // This will trigger the DrawingCanvas to calculate the initial bounds
-    // and call onBoundsCalculate, which will then set the selectionBounds.
+    // Set selection mode to active, then trigger the bounds calculation.
+    // The `onBoundsCalculate` callback will handle setting the selection bounds.
     setIsSelectionModeActive(true);
+    canvasRef.current.calculateAndReportBounds();
+    setAiOpen(false);
   };
 
   const handleBoundsCalculate = (bounds: BoundingBox | null) => {
@@ -45,13 +48,19 @@ const AppLayout: React.FC = () => {
     setSelectionBounds(bounds);
   };
 
+  const handleCancelSelection = () => {
+    setIsSelectionModeActive(false);
+    setSelectionBounds(null);
+    setAiFeedbackBoxes([]);
+    setAiOpen(false);
+  };
+
   const handleConfirmSelection = async () => {
     if (!canvasRef.current || !selectionBounds || isSubmitting) return;
 
     setIsSubmitting(true);
     setSubmissionError(null);
     setAiFeedbackBoxes([]);
-    setIsSelectionModeActive(false);
 
     try {
       const result = await canvasRef.current.exportStrokes(selectionBounds);
@@ -99,6 +108,7 @@ const AppLayout: React.FC = () => {
     } finally {
       setIsSubmitting(false);
       setSelectionBounds(null);
+      setIsSelectionModeActive(false);
     }
   };
 
@@ -116,11 +126,15 @@ const AppLayout: React.FC = () => {
           eraserWidth={eraserWidth}
           canvasRef={canvasRef}
           aiFeedbackBoxes={aiFeedbackBoxes}
+          showAiFeedbackBoxes={showAiFeedbackBoxes}
           isSelectionModeActive={isSelectionModeActive}
           selectionBounds={selectionBounds}
           onSelectionChange={handleSelectionChange}
           onConfirmSelection={handleConfirmSelection}
+          onCancelSelection={handleCancelSelection}
           onBoundsCalculate={handleBoundsCalculate}
+          isSubmitting={isSubmitting}
+          activeTool={activeTool}
         />
       </div>
       {/* Fixed drawing toolbar */}
@@ -134,6 +148,9 @@ const AppLayout: React.FC = () => {
         onEraserWidthChange={setEraserWidth}
         activeTool={activeTool}
         onActiveToolChange={setActiveTool}
+        showAiFeedbackBoxes={showAiFeedbackBoxes}
+        onToggleAiFeedbackBoxes={() => setShowAiFeedbackBoxes(prev => !prev)}
+        hasAiFeedback={aiFeedbackBoxes.length > 0}
       />
       <AIFloatingButton onClick={() => setAiOpen(true)} show={!aiOpen} />
       {aiOpen && <AIChatPanel onClose={() => setAiOpen(false)} onCaptureAllWork={handleCaptureAllWork} isSubmitting={isSubmitting} submissionError={submissionError} />}

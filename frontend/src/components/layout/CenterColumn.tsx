@@ -8,11 +8,15 @@ interface CenterColumnProps {
   eraserWidth: number;
   canvasRef: React.RefObject<DrawingCanvasRef | null>;
   aiFeedbackBoxes: any[];
+  showAiFeedbackBoxes: boolean;
   isSelectionModeActive: boolean;
   selectionBounds: BoundingBox | null;
   onSelectionChange: (bounds: BoundingBox) => void;
   onConfirmSelection: () => void;
+  onCancelSelection: () => void;
   onBoundsCalculate: (bounds: BoundingBox | null) => void;
+  isSubmitting: boolean;
+  activeTool: 'pen' | 'eraser';
 }
 
 const currentPath = 'Algebra  /  Linear Systems'; // This would be dynamic in a real app
@@ -23,11 +27,15 @@ const CenterColumn: React.FC<CenterColumnProps> = ({
   eraserWidth, 
   canvasRef,
   aiFeedbackBoxes,
+  showAiFeedbackBoxes,
   isSelectionModeActive,
   selectionBounds,
   onSelectionChange,
   onConfirmSelection,
-  onBoundsCalculate
+  onCancelSelection,
+  onBoundsCalculate,
+  isSubmitting,
+  activeTool
 }) => {
   return (
     <main className="flex-1 flex flex-col min-w-0 h-full bg-white relative">
@@ -51,11 +59,15 @@ const CenterColumn: React.FC<CenterColumnProps> = ({
           strokeColor={strokeColor}
           eraserWidth={eraserWidth}
           aiFeedbackBoxes={aiFeedbackBoxes}
+          showAiFeedbackBoxes={showAiFeedbackBoxes}
           isSelectionModeActive={isSelectionModeActive}
           selectionBounds={selectionBounds}
           onSelectionChange={onSelectionChange}
           onConfirmSelection={onConfirmSelection}
+          onCancelSelection={onCancelSelection}
           onBoundsCalculate={onBoundsCalculate}
+          isSubmitting={isSubmitting}
+          activeTool={activeTool}
         />
       </div>
     </main>

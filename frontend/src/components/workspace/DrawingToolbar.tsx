@@ -12,6 +12,9 @@ interface DrawingToolbarProps {
   onEraserWidthChange: (width: number) => void;
   activeTool: 'pen' | 'eraser';
   onActiveToolChange: (tool: 'pen' | 'eraser') => void;
+  showAiFeedbackBoxes: boolean;
+  onToggleAiFeedbackBoxes: () => void;
+  hasAiFeedback: boolean;
 }
 
 const tools = [
@@ -22,7 +25,7 @@ const tools = [
   { name: 'clear', icon: 'Trash2', label: 'Clear', group: 'action' },
 ];
 
-const strokeWidths = [1, 2, 4, 6, 8, 12];
+
 const colors = [
   { name: 'black', value: '#000000' },
   { name: 'red', value: '#ef4444' },
@@ -41,7 +44,10 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
   onStrokeColorChange,
   onEraserWidthChange,
   activeTool,
-  onActiveToolChange
+  onActiveToolChange,
+  showAiFeedbackBoxes,
+  onToggleAiFeedbackBoxes,
+  hasAiFeedback
 }) => {
   const [pressed, setPressed] = useState<{ [key: string]: boolean }>({});
 
@@ -74,11 +80,12 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
     }
   };
 
-  const handleWidthChange = (width: number) => {
+  const handleWidthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newWidth = parseInt(e.target.value);
     if (activeTool === 'pen') {
-      onStrokeWidthChange(width);
+      onStrokeWidthChange(newWidth);
     } else {
-      onEraserWidthChange(width);
+      onEraserWidthChange(newWidth);
     }
   };
 
@@ -122,18 +129,15 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
         {/* Stroke width selector */}
         <div className="flex items-center gap-1">
           <span className="text-xs text-neutral-500 mr-1">Width:</span>
-          {strokeWidths.map((width) => (
-            <button
-              key={width}
-              className={`w-6 h-6 flex items-center justify-center rounded text-xs font-medium transition
-                ${getCurrentWidth() === width ? 'bg-blue-100 text-blue-700 border border-blue-300' : 'bg-white hover:bg-neutral-50 text-neutral-600 border border-transparent'}
-              `}
-              onClick={() => handleWidthChange(width)}
-              title={`${width}px`}
-            >
-              {width}
-            </button>
-          ))}
+          <input
+            type="range"
+            min={activeTool === 'pen' ? "1" : "12"}
+            max={activeTool === 'pen' ? "12" : "100"}
+            value={activeTool === 'pen' ? strokeWidth : eraserWidth}
+            onChange={handleWidthChange}
+            className="w-24 custom-range-slider"
+          />
+          <span className="text-xs text-neutral-500 ml-1">{getCurrentWidth()}px</span>
         </div>
         
         {activeTool === 'eraser' && (
@@ -142,6 +146,25 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
           </>
         )}
       
+        {hasAiFeedback && (
+          <>
+            {/* Separator */}
+            <div className="mx-1 w-px h-6 bg-neutral-200 self-center" />
+
+            {/* AI Feedback Toggle */}
+            <button
+              className={`w-10 h-10 flex items-center justify-center rounded-full transition border-2 text-neutral-700
+                ${showAiFeedbackBoxes ? 'bg-blue-100 border-blue-300 shadow-md' : 'bg-white border-transparent hover:bg-neutral-50'}
+              `}
+              title="Toggle AI Feedback"
+              onClick={onToggleAiFeedbackBoxes}
+              type="button"
+            >
+              <Icon iconName="Bot" size={20} />
+            </button>
+          </>
+        )}
+
         {activeTool === 'pen' && (
           <>
           {/* Separator */}
