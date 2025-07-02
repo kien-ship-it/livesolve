@@ -1,48 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import Icon from '../ui/Icon';
-
-const tabs = [
-  { name: 'Feedback', icon: 'MessageSquare', label: 'Feedback' },
-  { name: 'Hint', icon: 'Lightbulb', label: 'Hint' },
-  { name: 'FullAnswer', icon: 'FileText', label: 'Full Answer' },
-];
+import { X, MessageSquare, Bot, Scan, Crop, Loader2 } from 'lucide-react';
 
 interface AIChatPanelProps {
   onClose: () => void;
+  onCaptureAllWork: () => void;
+  isSubmitting: boolean;
+  submissionError: string | null;
 }
 
 const ANIMATION_DURATION = 200; // ms
 
-const AIChatPanel: React.FC<AIChatPanelProps> = ({ onClose }) => {
+const AIChatPanel: React.FC<AIChatPanelProps> = ({
+  onClose,
+  onCaptureAllWork,
+  isSubmitting,
+  submissionError,
+}) => {
   const [show, setShow] = useState(false);
   const [exiting, setExiting] = useState(false);
   const [activeTab, setActiveTab] = useState('Feedback');
-  const [input, setInput] = useState('');
-  const [feedbackPopupOpen, setFeedbackPopupOpen] = useState(false);
-  const feedbackTabRef = React.useRef<HTMLButtonElement>(null);
-
-  const handleRefresh = () => {
-    // Add refresh logic here if needed
-  };
 
   useEffect(() => {
     setShow(true);
   }, []);
-
-  // Close popup when clicking outside
-  useEffect(() => {
-    if (!feedbackPopupOpen) return;
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        feedbackTabRef.current &&
-        !feedbackTabRef.current.contains(event.target as Node)
-      ) {
-        setFeedbackPopupOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [feedbackPopupOpen]);
 
   const handleClose = () => {
     setExiting(true);
@@ -51,104 +31,110 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({ onClose }) => {
     }, ANIMATION_DURATION);
   };
 
-  const handleFeedbackTabClick = () => {
-    setActiveTab('Feedback');
-    setFeedbackPopupOpen((open) => !open);
-  };
+  if (!show) return null;
 
-  const handleSelectAllWork = () => {
-    setFeedbackPopupOpen(false);
-    // TODO: Implement select all work logic
-  };
-  const handleSelectArea = () => {
-    setFeedbackPopupOpen(false);
-    // TODO: Implement select area logic
-  };
+  const tabs = [
+    { name: 'Chat', icon: <MessageSquare size={16} /> },
+    { name: 'Feedback', icon: <Bot size={16} /> },
+  ];
 
   return (
     <div
-      className={`fixed bottom-8 right-8 z-50 w-[360px] h-[50vh] bg-white rounded-xl shadow-2xl border border-neutral-200 flex flex-col
-        transition-opacity duration-100 ease-out
-        ${show && !exiting ? 'opacity-100' : 'opacity-0'} scale-100
-      `}
-      style={{ minHeight: 320, maxHeight: 480, transformOrigin: 'bottom right' }}
+      className={`fixed bottom-4 right-4 z-50 w-96 bg-white rounded-lg shadow-2xl flex flex-col transform transition-all duration-${ANIMATION_DURATION}`}
+      style={{
+        transform: `translateY(${exiting ? '100%' : '0'})`,
+        opacity: exiting ? 0 : 1,
+        transition: `transform ${ANIMATION_DURATION}ms ease-out, opacity ${ANIMATION_DURATION}ms ease-out`,
+      }}
     >
-      {/* Top right controls */}
-      <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
-        <button
-          className="text-neutral-400 hover:text-black focus:outline-none"
-          onClick={handleRefresh}
-          aria-label="Refresh AI Session"
-          type="button"
-        >
-          <Icon iconName="RefreshCcw" size={20} />
-        </button>
-        <button
-          className="w-8 h-8 flex items-center justify-center rounded-full bg-neutral-100 text-neutral-500 hover:text-black hover:bg-neutral-200 focus:outline-none"
-          onClick={handleClose}
-          aria-label="Close AI Panel"
-          type="button"
-        >
-          <Icon iconName="X" size={20} />
-        </button>
-      </div>
-      {/* Welcome message */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 text-center text-neutral-700">
-        <div className="text-lg font-semibold mb-4">How can I help you today?</div>
-        {/* Tabs below welcome message */}
-        <div className="flex flex-row justify-center items-center gap-2 mb-2">
+      {/* Header */}
+      <header className="flex items-center justify-between p-3 border-b border-neutral-200 bg-gray-50 rounded-t-lg">
+        <div className="flex items-center space-x-2">
           {tabs.map((tab) => (
-            <div key={tab.name} className="relative">
-              <button
-                ref={tab.name === 'Feedback' ? feedbackTabRef : undefined}
-                className={`flex flex-col items-center px-3 py-2 rounded-lg transition text-xs font-medium
-                  ${activeTab === tab.name ? 'bg-neutral-100 text-black' : 'text-neutral-500 hover:bg-neutral-50'}`}
-                onClick={tab.name === 'Feedback' ? handleFeedbackTabClick : () => setActiveTab(tab.name)}
-                type="button"
-              >
-                <Icon iconName={tab.icon as any} size={18} />
-                <span className="mt-1">{tab.label}</span>
-              </button>
-              {/* Popup for Feedback tab */}
-              {tab.name === 'Feedback' && feedbackPopupOpen && (
-                <div
-                  className="absolute left-1/2 top-full z-20 mt-2 w-40 bg-white border border-neutral-200 rounded-lg shadow-lg flex flex-col animate-fade-in"
-                  style={{ transform: 'translateX(-50%)' }}
-                >
-                  <button
-                    className="px-4 py-2 text-left hover:bg-neutral-100 rounded-t-lg focus:outline-none"
-                    onClick={handleSelectAllWork}
-                  >
-                    Select all work
-                  </button>
-                  <button
-                    className="px-4 py-2 text-left hover:bg-neutral-100 rounded-b-lg focus:outline-none"
-                    onClick={handleSelectArea}
-                  >
-                    Select area
-                  </button>
-                </div>
-              )}
-            </div>
+            <button
+              key={tab.name}
+              onClick={() => setActiveTab(tab.name)}
+              className={`px-3 py-1 rounded-md text-sm font-medium flex items-center space-x-1.5 transition-colors duration-200 ${
+                activeTab === tab.name
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-transparent text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              {tab.icon}
+              <span>{tab.name}</span>
+            </button>
           ))}
         </div>
-      </div>
-      {/* Input area */}
-      <form className="flex items-center gap-2 px-4 pb-4 pt-2" onSubmit={e => e.preventDefault()}>
-        <input
-          className="flex-1 rounded-full border border-neutral-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-300 bg-neutral-50"
-          type="text"
-          placeholder="Type your message..."
-          value={input}
-          onChange={e => setInput(e.target.value)}
-        />
-        <button
-          type="submit"
-          className="w-10 h-10 flex items-center justify-center rounded-full bg-black text-white hover:bg-neutral-800 transition"
-        >
-          <Icon iconName="Send" size={18} />
+        <button onClick={handleClose} className="p-1 rounded-full hover:bg-gray-200">
+          <X size={20} />
         </button>
-      </form>
+      </header>
+
+      {/* Content */}
+      <div className="p-4 flex-grow overflow-y-auto">
+        {activeTab === 'Chat' && (
+          <div>
+            <p>Chat functionality is not yet implemented.</p>
+          </div>
+        )}
+
+        {activeTab === 'Feedback' && (
+          <div>
+            <div className="text-center">
+              <h2 className="text-xl font-bold text-gray-800">AI Feedback</h2>
+              <p className="text-sm text-gray-500">
+                Select your work to get instant feedback.
+              </p>
+            </div>
+
+            <div className="mt-4 space-y-2">
+              <button
+                onClick={onCaptureAllWork}
+                disabled={isSubmitting}
+                className="w-full bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors duration-200 flex items-center justify-center space-x-2 disabled:bg-blue-300 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="animate-spin mr-2" size={20} />
+                    <span>Submitting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Scan size={20} />
+                    <span>Select all work</span>
+                  </>
+                )}
+              </button>
+              <button
+                onClick={() => console.log('Select area clicked')}
+                disabled={isSubmitting}
+                className="w-full bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors duration-200 flex items-center justify-center space-x-2 disabled:bg-gray-100 disabled:cursor-not-allowed"
+              >
+                <Crop size={20} />
+                <span>Select area</span>
+              </button>
+            </div>
+
+            {submissionError && (
+              <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+                <p className="font-bold">Error</p>
+                <p>{submissionError}</p>
+              </div>
+            )}
+
+            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+              <h3 className="font-semibold text-lg text-gray-800 mb-2">
+                How to get feedback
+              </h3>
+              <p className="text-sm text-gray-600">
+                Use the buttons above to select the part of your work you want
+                feedback on. The AI will analyze the selected area and provide
+                suggestions.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

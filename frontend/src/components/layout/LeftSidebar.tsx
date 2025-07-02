@@ -15,4 +15,4 @@ const LeftSidebar: React.FC = () => {
   );
 };
 
-export default LeftSidebar; 
+export default LeftSidebar;

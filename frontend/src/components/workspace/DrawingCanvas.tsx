@@ -8,10 +8,11 @@ export interface DrawingCanvasRef extends ReactSketchCanvasRef {
   } | null>;
 }
 
-interface DrawingCanvasProps {
-  strokeWidth?: number;
-  strokeColor?: string;
-  eraserWidth?: number;
+export interface DrawingCanvasProps {
+  strokeColor: string;
+  strokeWidth: number;
+  eraserWidth: number;
+  aiFeedbackBoxes?: any[];
   showBoundingBox?: boolean;
   onPathsChange?: (paths: CanvasPath[]) => void;
 }
@@ -28,14 +29,9 @@ interface BoundingBox {
   height: number;
 }
 
-const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({ 
-  strokeWidth = 2, 
-  strokeColor = 'black',
-  eraserWidth = 8,
-  showBoundingBox = true,
-  onPathsChange
-}, ref) => {
-  const [size] = useState({ width: 1300, height: 1000 });
+const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(
+  ({ strokeColor, strokeWidth, eraserWidth, aiFeedbackBoxes = [], showBoundingBox = true, onPathsChange }, ref) => {
+  const [size, setSize] = useState({ width: 1300, height: 1000 });
   const [paths, setPaths] = useState<CanvasPath[]>([]);
   const [boundingBox, setBoundingBox] = useState<BoundingBox | null>(null);
   
@@ -170,44 +166,61 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
   // Calculate bounding box from paths
   const calculateBoundingBox = useCallback((paths: CanvasPath[]): BoundingBox | null => {
     if (!paths.length) return null;
-    
+
     let minX = Infinity, minY = Infinity;
     let maxX = -Infinity, maxY = -Infinity;
     let hasPoints = false;
-    
+
     paths.forEach(path => {
-      // Access the points array safely
-      const points = (path as any).points || [];
-      // Points are stored as [x1, y1, x2, y2, ...] in the path
-      for (let i = 0; i < points.length; i += 2) {
-        const x = points[i];
-        const y = points[i + 1];
-        if (x === undefined || y === undefined) continue;
-        
+      const points = path.paths;
+      if (!points || points.length === 0) return;
+
+      points.forEach(point => {
+        const { x, y } = point;
+        if (x === undefined || y === undefined) return;
+
         hasPoints = true;
         minX = Math.min(minX, x);
         minY = Math.min(minY, y);
         maxX = Math.max(maxX, x);
         maxY = Math.max(maxY, y);
-      }
+      });
     });
-    
+
     if (!hasPoints) return null;
-    
-    // Add some padding around the strokes
+
     const padding = 20;
-    return {
+    const boundingBox = {
       x: Math.max(0, minX - padding),
       y: Math.max(0, minY - padding),
       width: Math.max(0, maxX - minX + padding * 2),
       height: Math.max(0, maxY - minY + padding * 2)
     };
+    console.log('[DrawingCanvas] Calculated bounding box:', boundingBox);
+    return boundingBox;
   }, []);
 
-  // Update bounding box when paths change
+  // Update bounding box and expand canvas when paths change
   useEffect(() => {
     const newBoundingBox = calculateBoundingBox(paths);
     setBoundingBox(newBoundingBox);
+
+    if (newBoundingBox) {
+      const expansionBuffer = 200; // Keep this much space around the drawing
+      const requiredWidth = newBoundingBox.x + newBoundingBox.width + expansionBuffer;
+      const requiredHeight = newBoundingBox.y + newBoundingBox.height + expansionBuffer;
+
+      setSize(currentSize => {
+        const newWidth = Math.max(currentSize.width, requiredWidth);
+        const newHeight = Math.max(currentSize.height, requiredHeight);
+
+        if (newWidth > currentSize.width || newHeight > currentSize.height) {
+          console.log(`[DrawingCanvas] Expanding canvas to ${newWidth}x${newHeight}`);
+        }
+
+        return { width: newWidth, height: newHeight };
+      });
+    }
   }, [paths, calculateBoundingBox]);
 
   // Handle paths change
@@ -253,7 +266,19 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
 
   // Export the area containing all strokes
   const exportStrokes = useCallback(async () => {
-    if (!internalCanvasRef.current || !boundingBox) return null;
+    console.log('[DrawingCanvas] exportStrokes called.');
+
+    if (!internalCanvasRef.current) {
+      console.error('[DrawingCanvas] Internal canvas ref not available.');
+      return null;
+    }
+
+    if (!boundingBox) {
+      console.error('[DrawingCanvas] Bounding box is not available. No strokes to export?');
+      return null;
+    }
+
+    console.log('[DrawingCanvas] Bounding box available:', boundingBox);
     
     try {
       // First, export the entire canvas as an image
@@ -309,10 +334,13 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
   }, [internalCanvasRef, boundingBox]);
 
   // Expose methods via ref
-  useImperativeHandle(ref, () => ({
-    ...(internalCanvasRef.current || {} as ReactSketchCanvasRef),
-    exportStrokes
-  }), [exportStrokes]);
+  useImperativeHandle(ref, () => {
+    console.log('[DrawingCanvas] useImperativeHandle: Exposing exportStrokes.');
+    return {
+      ...(internalCanvasRef.current || {} as ReactSketchCanvasRef),
+      exportStrokes
+    };
+  }, [exportStrokes]);
 
   return (
     <div
@@ -368,6 +396,25 @@ const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
               }}
             />
           )}
+          {aiFeedbackBoxes.map((box, index) => {
+            const [x1, y1, x2, y2] = box.box_2d;
+            return (
+              <div
+                key={index}
+                style={{
+                  position: 'absolute',
+                  left: `${x1}px`,
+                  top: `${y1}px`,
+                  width: `${x2 - x1}px`,
+                  height: `${y2 - y1}px`,
+                  border: '2px solid red',
+                  pointerEvents: 'none',
+                  zIndex: 11,
+                  boxSizing: 'border-box',
+                }}
+              />
+            );
+          })}
         </div>
       </div>
     </div>

@@ -1,14 +1,15 @@
 import React from 'react';
 import DrawingCanvas from '../workspace/DrawingCanvas';
 import Icon from '../ui/Icon';
-import type { ReactSketchCanvasRef } from 'react-sketch-canvas';
+import type { DrawingCanvasRef } from '../workspace/DrawingCanvas';
 
 interface CenterColumnProps {
   strokeWidth: number;
   strokeColor: string;
   eraserWidth: number;
-  canvasRef: React.RefObject<ReactSketchCanvasRef | null>;
+  canvasRef: React.RefObject<DrawingCanvasRef | null>;
   activeTool: 'pen' | 'eraser';
+  aiFeedbackBoxes: any[];
 }
 
 const currentPath = 'Algebra  /  Linear Systems'; // This would be dynamic in a real app
@@ -18,7 +19,7 @@ const CenterColumn: React.FC<CenterColumnProps> = ({
   strokeColor, 
   eraserWidth, 
   canvasRef,
-  activeTool
+  aiFeedbackBoxes
 }) => {
   return (
     <main className="flex-1 flex flex-col min-w-0 h-full bg-white relative">
@@ -37,11 +38,11 @@ const CenterColumn: React.FC<CenterColumnProps> = ({
       {/* Canvas area with top margin and left padding to account for sidebar */}
       <div className="flex-1 p-0 mt-14 bg-white w-full pl-60">
         <DrawingCanvas 
+          ref={canvasRef}
           strokeWidth={strokeWidth}
           strokeColor={strokeColor}
           eraserWidth={eraserWidth}
-          canvasRef={canvasRef}
-          activeTool={activeTool}
+          aiFeedbackBoxes={aiFeedbackBoxes}
         />
       </div>
     </main>
