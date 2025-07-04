@@ -14,7 +14,7 @@ html, body, #root {
 /* Custom scrollbar styling for OneNote-like experience */
 .custom-scrollbar::-webkit-scrollbar {
   width: 8px;
-  height: 8px;
+  background: transparent;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
@@ -22,17 +22,45 @@ html, body, #root {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2);
+  background: #e5e7eb;
   border-radius: 4px;
-  transition: background 0.2s ease;
+  margin-right: 12px;
+  border-left: 8px solid transparent;
+  background-clip: padding-box;
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.3);
+/* For Firefox */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #e5e7eb transparent;
+  padding-right: 12px;
 }
 
-.custom-scrollbar::-webkit-scrollbar-corner {
+/* Custom scrollbar for chat panel */
+.custom-scrollbar-chat-panel {
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin; /* For Firefox */
+  scrollbar-color: #c1c1c1 transparent; /* For Firefox */
+}
+
+.custom-scrollbar-chat-panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scrollbar-chat-panel::-webkit-scrollbar-track {
   background: transparent;
+}
+
+.custom-scrollbar-chat-panel::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.custom-scrollbar-chat-panel::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
 }
 
 .loader {

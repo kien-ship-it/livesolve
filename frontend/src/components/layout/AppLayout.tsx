@@ -12,7 +12,7 @@ const AppLayout: React.FC = () => {
   const [aiOpen, setAiOpen] = useState(false);
   const [strokeWidth, setStrokeWidth] = useState(2);
   const [strokeColor, setStrokeColor] = useState('#000000');
-  const [eraserWidth, setEraserWidth] = useState(8);
+  const [eraserWidth, setEraserWidth] = useState(20);
   const [activeTool, setActiveTool] = useState<'pen' | 'eraser'>('pen');
   const canvasRef = useRef<DrawingCanvasRef | null>(null);
   const [aiFeedbackBoxes, setAiFeedbackBoxes] = useState<any[]>([]);
@@ -97,6 +97,7 @@ const AppLayout: React.FC = () => {
             ],
           };
         });
+        setShowAiFeedbackBoxes(true);
         setAiFeedbackBoxes(translatedBoxes);
       } else {
         setAiFeedbackBoxes([]);

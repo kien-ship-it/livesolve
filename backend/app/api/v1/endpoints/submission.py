@@ -33,7 +33,6 @@ def submit_solution_and_get_feedback(
     4. Returns the structured data to the client.
     """
     problem_id = "problem_1_algebra"
-    canonical_solution = "2x + 5 = 11\n2x = 11 - 5\n2x = 6\nx = 3"
 
     public_gcs_url = gcs_service.upload_image_to_gcs(
         file=file, user_id=current_user.uid
@@ -49,7 +48,7 @@ def submit_solution_and_get_feedback(
 
     try:
         ai_feedback_data = feedback_service.get_errorbouding_from_image(
-            gcs_uri=gcs_uri, canonical_solution=canonical_solution
+            gcs_uri=gcs_uri
         )
     except Exception as e:
         raise HTTPException(
