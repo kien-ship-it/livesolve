@@ -17,3 +17,4 @@ dist-ssr
 .DS_Store
 GEMINI.md
 GEMINI.md
+*.md
