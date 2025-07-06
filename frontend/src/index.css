@@ -1,6 +1,67 @@
 /* frontend/src/index.css */
 @import "tailwindcss";
 
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  min-width: 100vw;
+  box-sizing: border-box;
+}
+
+/* Custom scrollbar styling for OneNote-like experience */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #e5e7eb;
+  border-radius: 4px;
+  margin-right: 12px;
+  border-left: 8px solid transparent;
+  background-clip: padding-box;
+}
+
+/* For Firefox */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #e5e7eb transparent;
+  padding-right: 12px;
+}
+
+/* Custom scrollbar for chat panel */
+.custom-scrollbar-chat-panel {
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin; /* For Firefox */
+  scrollbar-color: #c1c1c1 transparent; /* For Firefox */
+}
+
+.custom-scrollbar-chat-panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scrollbar-chat-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar-chat-panel::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.custom-scrollbar-chat-panel::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
 
 .loader {
     /* The "track" of the spinner */
@@ -25,3 +86,60 @@
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
   }
+
+@keyframes breathing {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.2;
+  }
+}
+
+.animate-breathing {
+  animation: breathing 1s ease-in-out infinite;
+}
+
+/* Custom Range Slider Styles */
+input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  width: 100%;
+}
+
+/* Track styles */
+input[type='range']::-webkit-slider-runnable-track {
+  background: #e0e7ff; /* Light blue background */
+  border-radius: 0.5rem;
+  height: 0.5rem;
+}
+
+input[type='range']::-moz-range-track {
+  background: #e0e7ff;
+  border-radius: 0.5rem;
+  height: 0.5rem;
+}
+
+/* Thumb styles */
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  background-color: #3b82f6; /* Blue thumb */
+  border: 2px solid #fff;
+  border-radius: 50%;
+  height: 1rem;
+  width: 1rem;
+  margin-top: -0.25rem; /* Center thumb vertically */
+  box-shadow: 0 0 0 0.125rem rgba(59, 130, 246, 0.25); /* Subtle blue glow */
+}
+
+input[type='range']::-moz-range-thumb {
+  background-color: #3b82f6;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  height: 1rem;
+  width: 1rem;
+  box-shadow: 0 0 0 0.125rem rgba(59, 130, 246, 0.25);
+}

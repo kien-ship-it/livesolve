@@ -1,3 +1,4 @@
+/*
 //
 // FILE: frontend/src/pages/ProblemPage.tsx
 //
@@ -6,7 +7,7 @@ import type { MouseEvent } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { submitSolution } from '../services/apiService';
 // --- UPDATED: Import new types for AI feedback with translation and error bounding boxes ---
-import type { SubmissionResult, ErrorEntry } from '../services/apiService';
+import type { SubmissionResult } from '../services/apiService';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
 import { ReactSketchCanvas, type ReactSketchCanvasRef, type CanvasPath } from 'react-sketch-canvas';
 import SubmissionModal from '../components/problem/SubmissionModal';
@@ -203,7 +204,7 @@ const ProblemPage: React.FC = () => {
           </div>
           <hr className="my-8" />
           
-          {/* Always show toolbox and canvas */}
+          // { Always show toolbox and canvas }
           <div className="mt-6">
             <h2 className="text-xl font-semibold text-gray-700 mb-4">
               {submissionResult ? "Here is your feedback:" : "Write Your Solution Below"}
@@ -239,7 +240,7 @@ const ProblemPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Conditionally render feedback messages and buttons below the canvas/tools */}
+          // { Conditionally render feedback messages and buttons below the canvas/tools }
           {isLoading && <div className="mt-8 flex justify-center items-center space-x-3"><LoadingSpinner /><p className="text-lg text-gray-600">Analyzing...</p></div>}
           {error && (
             <div className="mt-8 p-4 bg-red-100 border-l-4 border-red-500 text-red-700 rounded-md">
@@ -265,3 +266,4 @@ const ProblemPage: React.FC = () => {
 };
 
 export default ProblemPage;
+*/
