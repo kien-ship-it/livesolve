@@ -22,11 +22,8 @@ AI_REGION_VALUE="us-central1"
 CLOUD_RUN_SERVICE_NAME="livesolve-backend"
 ARTIFACT_REPO_NAME="livesolve-repo"
 IMAGE_NAME="backend-api"
-<<<<<<< Updated upstream
-IMAGE_TAG="0.2.4" # Using the same tag, no need to rebuild the image
-=======
+
 IMAGE_TAG="1.1.0" # Using the same tag, no need to rebuild the image
->>>>>>> Stashed changes
 
 # Database and App environment variables
 GCS_BUCKET_NAME_VALUE="livesolve-mvp-images"
