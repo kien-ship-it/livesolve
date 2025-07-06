@@ -53,7 +53,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
   }, [open]);
 
   return (
-    <div className={`relative inline-block ${className}`} ref={menuRef}>
+    <div className={`relative ${className}`} ref={menuRef}>
       <div onClick={() => setOpen((v) => !v)} tabIndex={0} role="button" aria-haspopup="menu" aria-expanded={open}>
         {trigger}
       </div>

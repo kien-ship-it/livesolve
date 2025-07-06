@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Icon from '../ui/Icon';
 
 const pages = [
@@ -70,8 +70,15 @@ const privatePages = [
 ];
 
 const WorkspaceList: React.FC = () => {
+  const [selectedItem, setSelectedItem] = useState<string | null>(null);
+  const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
+
+  const handleToggleExpand = (label: string) => {
+    setExpandedItems((prev) => ({ ...prev, [label]: !prev[label] }));
+  };
+
   return (
-    <div className="px-2 mt-2">
+    <div className="px-4 mt-2">
       {/* Main Links */}
       <div className="flex flex-col gap-1 mb-4">
         {pages.map((page) => (
@@ -85,26 +92,58 @@ const WorkspaceList: React.FC = () => {
         ))}
       </div>
       {/* Section Header */}
-      <div className="uppercase text-[10px] font-semibold text-neutral-500 mb-2 mt-4 px-2 tracking-wider bg-neutral-100 py-1 rounded">
-        Private
+      <div className="flex items-center justify-between uppercase text-xs font-semibold text-neutral-500 mb-4 mt-4 px-2 tracking-wider bg-blue-100 py-1.5 rounded">
+        <span>Private</span>
+        <div className="flex items-center gap-1">
+          <button className="p-0.5 rounded hover:bg-neutral-300 transition-colors">
+            <Icon iconName={'FilePlus' as any} size={16} className="text-neutral-600" />
+          </button>
+          <button className="p-0.5 rounded hover:bg-neutral-300 transition-colors">
+            <Icon iconName={'FolderPlus' as any} size={16} className="text-neutral-600" />
+          </button>
+        </div>
       </div>
       {/* Math Directories */}
       <div className="flex flex-col gap-1">
         {privatePages.map((page) => (
           <React.Fragment key={page.label}>
-            <button
-              className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-neutral-700 transition hover:bg-neutral-200`}
+            <div
+              className={`flex items-center justify-between w-full rounded-md transition border ${
+                selectedItem === page.label
+                  ? 'border-blue-500 bg-neutral-100'
+                  : 'border-transparent'
+              } hover:bg-neutral-200`}
             >
-              <Icon iconName={page.icon as any} size={16} className={page.color} />
-              <span>{page.label}</span>
-            </button>
+              <div
+                onClick={() => setSelectedItem(page.label)}
+                className="flex-grow flex items-center gap-2 px-2 py-1.5 text-sm text-neutral-700 cursor-pointer"
+              >
+                <Icon iconName={page.icon as any} size={16} className={page.color} />
+                <span>{page.label}</span>
+              </div>
+              <button
+                onClick={() => handleToggleExpand(page.label)}
+                className="p-1 mr-1 rounded hover:bg-neutral-300"
+              >
+                <Icon
+                  iconName={expandedItems[page.label] ? 'ChevronDown' : 'ChevronRight'}
+                  size={16}
+                  className="text-neutral-500"
+                />
+              </button>
+            </div>
             {/* Subpages */}
-            {page.subpages && (
+            {page.subpages && expandedItems[page.label] && (
               <div className="flex flex-col gap-1 pl-6">
                 {page.subpages.map((sub) => (
                   <button
                     key={sub.label}
-                    className="flex items-center gap-2 px-2 py-1.5 rounded-md text-xs text-neutral-500 transition hover:bg-neutral-200"
+                    onClick={() => setSelectedItem(sub.label)}
+                    className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-xs text-neutral-500 transition hover:bg-neutral-200 border ${
+                      selectedItem === sub.label
+                        ? 'border-blue-500 bg-neutral-100'
+                        : 'border-transparent'
+                    }`}
                   >
                     <Icon iconName={sub.icon as any} size={14} className={sub.color} />
                     <span>{sub.label}</span>

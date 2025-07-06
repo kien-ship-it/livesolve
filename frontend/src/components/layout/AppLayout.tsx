@@ -9,6 +9,7 @@ import AIChatPanel from '../ai/AIChatPanel';
 import type { DrawingCanvasRef, BoundingBox } from '../workspace/DrawingCanvas';
 
 const AppLayout: React.FC = () => {
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const [strokeWidth, setStrokeWidth] = useState(2);
   const [strokeColor, setStrokeColor] = useState('#000000');
@@ -25,6 +26,10 @@ const AppLayout: React.FC = () => {
   const [showAiFeedbackBoxes, setShowAiFeedbackBoxes] = useState(true);
 
   const { currentUser } = useAuth();
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed(!isSidebarCollapsed);
+  };
 
   const handleCaptureAllWork = () => {
     if (!canvasRef.current) return;
@@ -116,12 +121,13 @@ const AppLayout: React.FC = () => {
   return (
     <div className="flex h-screen bg-white relative">
       {/* Fixed left sidebar */}
-      <div className="fixed left-0 top-0 h-full z-20 bg-gray-50">
-        <LeftSidebar />
+      <div className={`fixed left-0 top-0 h-full z-20 bg-gray-50 transition-all duration-300 ${isSidebarCollapsed ? 'w-16' : 'w-64'}`}>
+        <LeftSidebar isCollapsed={isSidebarCollapsed} onToggle={toggleSidebar} />
       </div>
       {/* Main content area extending to left edge to cover gaps */}
-      <div className="flex-1 flex min-w-0 transition-all duration-300 ml-0 bg-white">
+      <div className={`flex-1 flex min-w-0 transition-all duration-300 bg-white ${isSidebarCollapsed ? 'ml-16' : 'ml-64'}`}>
         <CenterColumn
+          isSidebarCollapsed={isSidebarCollapsed}
           strokeWidth={strokeWidth}
           strokeColor={strokeColor}
           eraserWidth={eraserWidth}
@@ -140,6 +146,7 @@ const AppLayout: React.FC = () => {
       </div>
       {/* Fixed drawing toolbar */}
       <DrawingToolbar 
+        isSidebarCollapsed={isSidebarCollapsed}
         canvasRef={canvasRef}
         strokeWidth={strokeWidth}
         strokeColor={strokeColor}

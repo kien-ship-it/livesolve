@@ -3,6 +3,7 @@ import Icon from '../ui/Icon';
 import type { DrawingCanvasRef } from './DrawingCanvas';
 
 interface DrawingToolbarProps {
+  isSidebarCollapsed: boolean;
   canvasRef: React.RefObject<DrawingCanvasRef | null>;
   strokeWidth: number;
   strokeColor: string;
@@ -36,6 +37,7 @@ const colors = [
 ];
 
 const DrawingToolbar: React.FC<DrawingToolbarProps> = ({ 
+  isSidebarCollapsed,
   canvasRef, 
   strokeWidth, 
   strokeColor, 
@@ -94,7 +96,7 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
   };
 
   return (
-    <div className="fixed bottom-6 z-30 left-64 right-0 flex justify-center">
+    <div className={`fixed bottom-6 z-30 right-0 flex justify-center transition-all duration-300 ${isSidebarCollapsed ? 'left-16' : 'left-64'}`}>
       <div className="flex flex-row gap-2 bg-white rounded-lg shadow-lg p-2 border border-neutral-200">
         {/* Main tools */}
         {tools.map((tool, idx) => (
