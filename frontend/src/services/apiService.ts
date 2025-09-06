@@ -31,6 +31,15 @@ export interface SubmissionResult {
   ai_feedback_data: AIFeedbackData; // Structured AI feedback data
 }
 
+/**
+ * Interface for AI testing responses (without database storage)
+ */
+export interface AITestResult {
+  image_gcs_url?: string;
+  ai_feedback_data: AIFeedbackData;
+  message: string;
+}
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 /**
@@ -54,6 +63,64 @@ export const submitSolution = async (imageFile: File, token: string): Promise<Su
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ detail: 'An unknown error occurred during submission.' }));
+    const errorMessage = errorData.detail || `Server responded with status ${response.status}`;
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+};
+
+/**
+ * Tests AI feedback functionality without database storage.
+ * This is a temporary endpoint for testing AI without Cloud SQL.
+ *
+ * @param imageFile The image file from the user's input.
+ * @param token The Firebase auth ID token for the user.
+ * @returns A promise that resolves to the AITestResult.
+ */
+export const testAIFeedback = async (imageFile: File, token: string): Promise<AITestResult> => {
+  const formData = new FormData();
+  formData.append('file', imageFile);
+
+  const response = await fetch(`${API_BASE_URL}/api/v1/ai/test-feedback`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ detail: 'An unknown error occurred during AI testing.' }));
+    const errorMessage = errorData.detail || `Server responded with status ${response.status}`;
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+};
+
+/**
+ * Tests only bounding box detection functionality.
+ * This is a temporary endpoint for testing AI without Cloud SQL.
+ *
+ * @param imageFile The image file from the user's input.
+ * @param token The Firebase auth ID token for the user.
+ * @returns A promise that resolves to the AITestResult.
+ */
+export const testBoundingBoxes = async (imageFile: File, token: string): Promise<AITestResult> => {
+  const formData = new FormData();
+  formData.append('file', imageFile);
+
+  const response = await fetch(`${API_BASE_URL}/api/v1/ai/test-bounding-boxes`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ detail: 'An unknown error occurred during bounding box testing.' }));
     const errorMessage = errorData.detail || `Server responded with status ${response.status}`;
     throw new Error(errorMessage);
   }

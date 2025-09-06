@@ -6,6 +6,8 @@ interface AIChatPanelProps {
   onCaptureAllWork: () => void;
   isSubmitting: boolean;
   submissionError: string | null;
+  isTestingMode: boolean;
+  onToggleTestingMode: () => void;
 }
 
 const ANIMATION_DURATION = 200; // ms
@@ -15,6 +17,8 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
   onCaptureAllWork,
   isSubmitting,
   submissionError,
+  isTestingMode,
+  onToggleTestingMode,
 }) => {
   const [show, setShow] = useState(false);
   const [exiting, setExiting] = useState(false);
@@ -95,9 +99,23 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
             </button>
           ))}
         </div>
-        <button onClick={handleClose} className="p-1 rounded-full hover:bg-gray-200">
-          <X size={20} />
-        </button>
+        <div className="flex items-center space-x-2">
+          {/* Testing Mode Toggle */}
+          <button
+            onClick={onToggleTestingMode}
+            className={`px-2 py-1 rounded text-xs font-medium transition-colors duration-200 ${
+              isTestingMode
+                ? 'bg-orange-100 text-orange-700 border border-orange-300'
+                : 'bg-green-100 text-green-700 border border-green-300'
+            }`}
+            title={isTestingMode ? 'Testing Mode: No database storage' : 'Production Mode: Full database storage'}
+          >
+            {isTestingMode ? '🧪 Test' : '🚀 Live'}
+          </button>
+          <button onClick={handleClose} className="p-1 rounded-full hover:bg-gray-200">
+            <X size={20} />
+          </button>
+        </div>
       </header>
 
       {/* Content */}
@@ -227,6 +245,14 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
               <p className="text-sm text-gray-500">
                 Select your work to get instant feedback.
               </p>
+              {/* Testing Mode Indicator */}
+              <div className={`mt-2 px-3 py-1 rounded-full text-xs font-medium inline-block ${
+                isTestingMode
+                  ? 'bg-orange-100 text-orange-700 border border-orange-300'
+                  : 'bg-green-100 text-green-700 border border-green-300'
+              }`}>
+                {isTestingMode ? '🧪 Testing Mode (No Database)' : '🚀 Production Mode (Full Storage)'}
+              </div>
             </div>
 
             <div className="mt-4 space-y-2">

@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { submitSolution } from '../../services/apiService';
+import { submitSolution, testAIFeedback } from '../../services/apiService';
 import LeftSidebar from './LeftSidebar';
 import CenterColumn from './CenterColumn';
 import DrawingToolbar from '../workspace/DrawingToolbar';
@@ -24,6 +24,9 @@ const AppLayout: React.FC = () => {
   const [isSelectionModeActive, setIsSelectionModeActive] = useState(false);
   const [selectionBounds, setSelectionBounds] = useState<BoundingBox | null>(null);
   const [showAiFeedbackBoxes, setShowAiFeedbackBoxes] = useState(true);
+  
+  // State for AI testing mode (temporary pipeline without database)
+  const [isTestingMode, setIsTestingMode] = useState(true); // Default to testing mode
 
   const { currentUser } = useAuth();
 
@@ -80,7 +83,10 @@ const AppLayout: React.FC = () => {
       }
       const token = await currentUser.getIdToken();
 
-      const apiResponse = await submitSolution(imageFile, token);
+      // Use testing endpoints when in testing mode, otherwise use normal submission
+      const apiResponse = isTestingMode 
+        ? await testAIFeedback(imageFile, token)
+        : await submitSolution(imageFile, token);
 
       if (apiResponse.ai_feedback_data && apiResponse.ai_feedback_data.errors) {
         const translatedBoxes = apiResponse.ai_feedback_data.errors.map(error => {
@@ -161,7 +167,16 @@ const AppLayout: React.FC = () => {
         hasAiFeedback={aiFeedbackBoxes.length > 0}
       />
       <AIFloatingButton onClick={() => setAiOpen(true)} show={!aiOpen} />
-      {aiOpen && <AIChatPanel onClose={() => setAiOpen(false)} onCaptureAllWork={handleCaptureAllWork} isSubmitting={isSubmitting} submissionError={submissionError} />}
+      {aiOpen && (
+        <AIChatPanel 
+          onClose={() => setAiOpen(false)} 
+          onCaptureAllWork={handleCaptureAllWork} 
+          isSubmitting={isSubmitting} 
+          submissionError={submissionError}
+          isTestingMode={isTestingMode}
+          onToggleTestingMode={() => setIsTestingMode(!isTestingMode)}
+        />
+      )}
     </div>
   );
 };

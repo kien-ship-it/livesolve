@@ -53,8 +53,9 @@ def get_errorbouding_from_image(gcs_uri: str) -> dict:
         config = GenerateContentConfig(
             system_instruction="""
             Return bounding boxes as an array with labels for errors only.
-            Never return masks. Limit to 10 objects.
+            Never return masks. Limit to 5 objects.
             If no error found, return an empty list.
+            YOU MUST choose from these pre-analyzed bounding boxes for the syntax:
             """,
             temperature=0.5,
             response_mime_type="application/json",
@@ -138,6 +139,7 @@ def get_bounding_from_image(gcs_uri: str) -> list[BoundingBox]:
             system_instruction="""
             Return bounding boxes as an array with labels.
             Never return masks. Limit to 30 objects.
+            Be as detailed as possible.
             """,
             temperature=0,
             response_mime_type="application/json",
@@ -145,7 +147,7 @@ def get_bounding_from_image(gcs_uri: str) -> list[BoundingBox]:
             thinking_config=ThinkingConfig(thinking_budget=0)
         )
 
-        prompt = "Output the bounding box of all syntaxes in the math work."
+        prompt = "Output the bounding box of all individual syntaxes or group of notations (as appropriate) in the math work."
         response = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=[
