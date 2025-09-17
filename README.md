@@ -278,9 +278,8 @@ From the `frontend/` directory:
 npm run build
 
 # 2. Deploy the built files to Firebase Hosting
-firebase deploy --only hosting```
-
----
+firebase deploy --only hosting
+```
 
 ## 📂 Project Structure
 ```
@@ -302,7 +301,8 @@ livesolve/
 │   │   └── pages/          # Page components
 │   ├── package.json        # Node dependencies
 │   └── vite.config.ts      # Vite configuration
-└── README.md                # This file```
+└── README.md                # This file
+```
 
 ---
 
